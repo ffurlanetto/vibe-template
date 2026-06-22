@@ -38,6 +38,7 @@ cd claude-template
 | Stack | Technology |
 |-------|-----------|
 | `java-spring` | Java 21 / Spring Boot 3 |
+| `java-quarkus` | Java 21 / Quarkus 3 / Gradle |
 | `dotnet-aspnet` | .NET 8 / ASP.NET Core |
 | `python-fastapi` | Python 3.12 / FastAPI |
 | `go` | Go 1.23 / chi |

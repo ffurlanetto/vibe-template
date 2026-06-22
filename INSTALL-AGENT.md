@@ -34,7 +34,7 @@ Before executing any step, confirm you have the following information. If any va
 | Merge strategy | `MERGE_STRATEGY` | `PR with mandatory review` | ✅ |
 | Tech stack details | (see B2 fields below) | | ✅ |
 
-**Valid stacks:** `java-spring` · `dotnet-aspnet` · `python-fastapi` · `go` · `nestjs` · `rust` · `rails` · `react-native` · `flutter` · `monorepo` · `frontend`
+**Valid stacks:** `java-spring` · `java-quarkus` · `dotnet-aspnet` · `python-fastapi` · `go` · `nestjs` · `rust` · `rails` · `react-native` · `flutter` · `monorepo` · `frontend`
 
 If `STACK` is not in the list above, stop and ask the user to choose a valid stack or provide their own preset content.
 

@@ -10,7 +10,7 @@ A drop-in `.claude/` configuration that turns Claude Code into a disciplined eng
 
 - **Plan-first workflow** — Claude generates a structured plan and waits for your approval before writing a single line of code
 - **Built-in security hooks** — hardcoded secret detection on every file write and before every commit
-- **Stack-specific presets** — opinionated conventions for 11 tech stacks, ready to paste
+- **Stack-specific presets** — opinionated conventions for 12 tech stacks, ready to paste
 - **Slash commands** — `/plan`, `/review`, `/security-audit`, `/debug`, `/adr` wired up and ready
 - **ADR + spec templates** — architectural decisions and functional specs as first-class artifacts
 
@@ -43,6 +43,7 @@ claude
 | Stack | Technology |
 |-------|-----------|
 | `java-spring` | Java 21 / Spring Boot 3 |
+| `java-quarkus` | Java 21 / Quarkus 3 / Gradle |
 | `dotnet-aspnet` | .NET 8 / ASP.NET Core |
 | `python-fastapi` | Python 3.12 / FastAPI |
 | `go` | Go 1.23 / chi |

@@ -11,7 +11,7 @@ warn()    { echo -e "${YELLOW}⚠${NC}  $*"; }
 error()   { echo -e "${RED}✗${NC} $*"; exit 1; }
 
 # ── Available stacks ──────────────────────────────────────────────────────────
-STACKS=("java-spring" "dotnet-aspnet" "python-fastapi" "go" "nestjs" "rust" "rails" "react-native" "flutter" "monorepo" "frontend")
+STACKS=("java-spring" "java-spring-gradle" "java-quarkus" "dotnet-aspnet" "python-fastapi" "go" "nestjs" "rust" "rails" "react-native" "flutter" "monorepo" "frontend" "sre")
 
 # ── Help ──────────────────────────────────────────────────────────────────────
 usage() {

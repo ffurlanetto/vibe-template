@@ -54,6 +54,18 @@ Adapt verifications to the language and stack defined in Part B of CLAUDE.md.
 - [ ] Consistent transactions (no unhandled partial writes)
 - [ ] Project-specific constraints respected (B6)
 
+## Review grid — Performance (budgets defined in B6)
+
+- [ ] No N+1 queries on list endpoints (check generated query count)
+- [ ] Indexes present on frequently filtered / joined columns
+- [ ] No long-running transactions blocking rows
+- [ ] Collection endpoints return paginated responses
+- [ ] HTTP cache headers present on static resources (`Cache-Control`, `ETag`)
+- [ ] No sequential external calls where parallel calls are possible
+- [ ] Frontend: no full re-render on partial state change
+- [ ] Frontend: images optimized (format, dimensions, lazy loading)
+- [ ] Frontend: route-level bundle splitting in place
+
 ---
 
 ## Report format

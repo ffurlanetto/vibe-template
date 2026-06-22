@@ -29,6 +29,7 @@ template/
     │   └── debug.md                   # /debug
     └── presets/
         ├── java-spring.md             # Java / Spring Boot
+        ├── java-quarkus.md            # Java / Quarkus / Gradle
         ├── dotnet-aspnet.md           # .NET / ASP.NET Core
         ├── python-fastapi.md          # Python / FastAPI
         ├── go.md                      # Go
@@ -57,7 +58,7 @@ template/
 ./init.sh frontend-app frontend ~/projects/frontend-app
 ```
 
-**Available stacks:** `java-spring` · `dotnet-aspnet` · `python-fastapi` · `go` · `nestjs` · `rust` · `rails` · `react-native` · `flutter` · `monorepo` · `frontend`
+**Available stacks:** `java-spring` · `java-quarkus` · `dotnet-aspnet` · `python-fastapi` · `go` · `nestjs` · `rust` · `rails` · `react-native` · `flutter` · `monorepo` · `frontend`
 
 The script automatically creates:
 - The full directory structure
