@@ -1,0 +1,167 @@
+{
+  "//": "=================================================================",
+  "// SECTION STATIC": "Do not modify — rules common to all projects",
+  "// SECTION STACK": "Uncomment the block matching your stack",
+  "//2": "=================================================================",
+
+  "permissions": {
+
+    "allow": [
+
+      "// ── GIT (universel) ──────────────────────────────────────────",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git pull*)",
+      "Bash(git checkout*)",
+      "Bash(git stash*)",
+
+      "// ── UNCOMMENT ACCORDING TO YOUR STACK ──────────────────────",
+
+      "// --- Java / Maven ---",
+      "// Bash(mvn test*)",
+      "// Bash(mvn build*)",
+      "// Bash(mvn package*)",
+      "// Bash(mvn clean*)",
+      "// Bash(mvn verify*)",
+      "// Bash(mvn checkstyle:check)",
+      "// Bash(mvn spring-boot:run)",
+
+      "// --- Java / Gradle ---",
+      "// Bash(./gradlew test*)",
+      "// Bash(./gradlew build*)",
+      "// Bash(./gradlew check*)",
+      "// Bash(./gradlew bootRun)",
+
+      "// --- .NET ---",
+      "// Bash(dotnet test*)",
+      "// Bash(dotnet build*)",
+      "// Bash(dotnet run*)",
+      "// Bash(dotnet restore*)",
+      "// Bash(dotnet format*)",
+
+      "// --- Python ---",
+      "// Bash(pytest*)",
+      "// Bash(ruff check*)",
+      "// Bash(ruff format*)",
+      "// Bash(mypy*)",
+      "// Bash(uv sync*)",
+      "// Bash(uv run*)",
+      "// Bash(pip install*)",
+
+      "// --- Go ---",
+      "// Bash(go test ./...)",
+      "// Bash(go build ./...)",
+      "// Bash(go vet ./...)",
+      "// Bash(go mod tidy)",
+      "// Bash(go mod download)",
+      "// Bash(golangci-lint run*)",
+
+      "// --- Rust ---",
+      "// Bash(cargo test*)",
+      "// Bash(cargo build*)",
+      "// Bash(cargo clippy*)",
+      "// Bash(cargo fmt*)",
+      "// Bash(cargo check*)",
+      "// Bash(cargo run*)",
+
+      "// --- Node.js / npm ---",
+      "// Bash(npm run test*)",
+      "// Bash(npm run lint*)",
+      "// Bash(npm run build*)",
+      "// Bash(npm run dev*)",
+      "// Bash(npm run type-check*)",
+      "// Bash(npm install*)",
+      "// Bash(npx*)",
+
+      "// --- Node.js / pnpm ---",
+      "// Bash(pnpm test*)",
+      "// Bash(pnpm lint*)",
+      "// Bash(pnpm build*)",
+      "// Bash(pnpm dev*)",
+      "// Bash(pnpm type-check*)",
+
+      "// --- Docker (si applicable) ---",
+      "// Bash(docker build*)",
+      "// Bash(docker compose up*)",
+      "// Bash(docker compose down*)",
+
+      "// --- Make (si applicable) ---",
+      "// Bash(make test*)",
+      "// Bash(make build*)",
+      "// Bash(make lint*)"
+    ],
+
+    "deny": [
+
+      "// ── SECURITY — DO NOT MODIFY ────────────────────────────────",
+
+      "// Destructive commands",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~*)",
+      "Bash(:(){ :|:& };:)",
+
+      "// Execution of unverified remote scripts",
+      "Bash(curl * | bash*)",
+      "Bash(curl * | sh*)",
+      "Bash(wget * | bash*)",
+      "Bash(wget * | sh*)",
+
+      "// Fichiers de secrets et credentials",
+      "Read(**/.env)",
+      "Read(**/.env.local)",
+      "Read(**/.env.production)",
+      "Read(**/.env.staging)",
+      "Read(**/secrets*)",
+      "Read(**/*.key)",
+      "Read(**/*.pem)",
+      "Read(**/*.p12)",
+      "Read(**/*.pfx)",
+      "Read(**/*.jks)",
+      "Read(**/id_rsa*)",
+      "Read(**/id_ed25519*)",
+      "Read(**/*.credentials)",
+      "Read(**/appsettings.Production.json)",
+      "Read(**/application-prod.properties)",
+      "Read(**/application-prod.yml)"
+    ]
+  },
+
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(python3 -c \"import json,os; d=json.loads(os.environ.get('CLAUDE_TOOL_INPUT','{}')); print(d.get('file_path',''))\" 2>/dev/null); [ -n \"$FILE\" ] && [ -f \"$FILE\" ] && grep -nEi '(password|secret|token|api.?key)[[:space:]]*[=:][[:space:]]*[\"'\\''`][^\"'\\''`]{8,}' \"$FILE\" 2>/dev/null && echo '⚠️  WARNING: Potential hardcoded secret in '\"$FILE\"' — review before committing.' || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git diff --cached | grep -Ei '^\\+.*(password|secret|token|api.?key)[[:space:]]*[=:][[:space:]]*[\"'\\''`][^\"'\\''`]{8,}' 2>/dev/null && echo '⛔ BLOCKED: Potential secret in staged changes — commit aborted. Remove the secret and use environment variables.' && exit 1 || true"
+          }
+        ]
+      }
+    ]
+  },
+
+  "//3": "=================================================================",
+  "// GLOBAL OPTIONS": "Adjust according to team preferences",
+  "//4": "=================================================================",
+
+  "includeCoAuthoredBy": true,
+  "cleanupPeriodDays": 30,
+
+  "//5": "Uncomment to force a default permission mode",
+  "// defaultMode": "ask"
+}

@@ -1,0 +1,83 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: [main, master, develop]
+  push:
+    branches: [main, master]
+
+# ── GITHUB ACTIONS SECURITY ──────────────────────────────────────────────────
+# CORE RULE: never interpolate ${{ github.event.* }} directly inside a `run:`
+# block — command injection risk if an attacker controls a PR title, commit
+# message, or event payload.
+#
+# ✅ SAFE PATTERN — pass through an environment variable:
+#   env:
+#     PR_TITLE: ${{ github.event.pull_request.title }}
+#   run: echo "$PR_TITLE"
+#
+# ❌ UNSAFE PATTERN — direct interpolation inside run:
+#   run: echo "${{ github.event.pull_request.title }}"
+#
+# High-risk inputs: issue.title/body, pull_request.title/body,
+# comment.body, head_commit.message, head_ref, client_payload.*
+#
+# Reference: https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/
+# ──────────────────────────────────────────────────────────────────────────────
+
+jobs:
+  quality:
+    name: Tests · Lint · Build
+    runs-on: ubuntu-latest
+
+    # Minimal permissions — principle of least privilege
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Adapt the steps below to your stack (see B4 in CLAUDE.md) ──
+
+      - name: Install dependencies
+        run: echo "Remplacer par <install_cmd> de la section B4"
+        # Exemples :
+        #   mvn install -DskipTests
+        #   dotnet restore
+        #   uv sync
+        #   go mod download
+        #   npm install
+
+      - name: Run tests
+        run: echo "Remplacer par <test_cmd> de la section B4"
+        # Exemples :
+        #   mvn test
+        #   dotnet test --collect:"XPlat Code Coverage"
+        #   pytest --cov=src --cov-report=term-missing
+        #   go test ./... -race -count=1
+        #   npm run test
+
+      - name: Lint
+        run: echo "Remplacer par <lint_cmd> de la section B4"
+        # Exemples :
+        #   mvn checkstyle:check spotbugs:check
+        #   dotnet build --configuration Release /p:TreatWarningsAsErrors=true
+        #   ruff check . && ruff format --check .
+        #   golangci-lint run ./...
+        #   npm run lint
+
+      - name: Type check
+        run: echo "Remplacer par <typecheck_cmd> de la section B4 — supprimer si non applicable"
+        # Exemples :
+        #   mypy src/
+        #   npx tsc --noEmit
+        # Go and Java have no separate step (included in build/lint)
+
+      - name: Build
+        run: echo "Remplacer par <build_cmd> de la section B4"
+        # Exemples :
+        #   mvn package -DskipTests
+        #   dotnet build --configuration Release
+        #   python -m build
+        #   go build ./...
+        #   npm run build
