@@ -29,14 +29,37 @@ Before executing any step, confirm you have the following information. If any va
 | Team / owner | `TEAM` | `payments-team` | ✅ |
 | Ticket prefix | `TICKET_PREFIX` | `PAY` | ✅ |
 | Destination path | `DEST` | `/workspace/payment-api` | ✅ |
-| Template path | `TEMPLATE_PATH` | `/path/to/template` | ✅ |
+| Template source | `TEMPLATE_URL` **or** `TEMPLATE_PATH` | `https://github.com/org/template` or `/path/to/template` | ✅ (one of the two) |
 | Main branch | `MAIN_BRANCH` | `main` | ✅ |
 | Merge strategy | `MERGE_STRATEGY` | `PR with mandatory review` | ✅ |
 | Tech stack details | (see B2 fields below) | | ✅ |
 
+**Template source — choose one:**
+- `TEMPLATE_URL` — a Git repository URL (HTTPS or SSH). The agent will clone it. Use this for online installation.
+- `TEMPLATE_PATH` — an absolute path to an already-cloned local copy. Use this when the template is already on disk.
+
+If both are provided, `TEMPLATE_URL` takes precedence.
+
 **Valid stacks:** `java-spring` · `java-spring-gradle` · `java-quarkus` · `dotnet-aspnet` · `python-fastapi` · `go` · `nestjs` · `rust` · `rails` · `react-native` · `flutter` · `monorepo` · `frontend` · `sre`
 
 If `STACK` is not in the list above, stop and ask the user to choose a valid stack or provide their own preset content.
+
+---
+
+## Step 0 — Fetch the template (online installation only)
+
+> **Skip this step** if `TEMPLATE_PATH` was provided and the directory already exists on disk.
+
+If `TEMPLATE_URL` was provided, clone the template into a temporary directory and set `TEMPLATE_PATH` to that directory:
+
+```bash
+TEMPLATE_PATH="$(mktemp -d)/claude-template"
+git clone --depth 1 {TEMPLATE_URL} "{TEMPLATE_PATH}"
+```
+
+**Verify:** confirm that `{TEMPLATE_PATH}/CLAUDE.md` exists after the clone. If the clone fails (network error, authentication required, invalid URL), stop and report the exact error to the user. Do not proceed.
+
+> **Note:** `--depth 1` performs a shallow clone (only the latest commit). This is sufficient for installation and avoids downloading full history.
 
 ---
 
@@ -286,6 +309,7 @@ Project      : {PROJECT_NAME}
 Stack        : {STACK}
 Location     : {DEST}
 Template v   : [contents of .claude/.template-version]
+Template src : [TEMPLATE_URL if cloned online, or TEMPLATE_PATH if local]
 
 ### Completed
 - [x] Template files copied
@@ -317,6 +341,8 @@ Replace `### Requires manual completion` with the actual list of items that coul
 | Situation | Action |
 |-----------|--------|
 | Missing required input | Stop. Ask the user for the missing value. Do not guess. |
+| Neither `TEMPLATE_URL` nor `TEMPLATE_PATH` provided | Stop. Ask the user which installation method to use and for the corresponding value. |
+| `git clone` fails (network, auth, invalid URL) | Stop. Report the exact error and URL. Ask the user to verify the URL or provide a local `TEMPLATE_PATH`. |
 | Unknown stack | Stop. List valid stacks. Ask the user to choose. |
 | Template file missing | Stop. Report the exact missing path. |
 | Destination already exists and non-empty | Ask the user to confirm overwrite or provide a different path. |
