@@ -38,6 +38,7 @@ cd claude-template
 | Stack | Technology |
 |-------|-----------|
 | `java-spring` | Java 21 / Spring Boot 3 |
+| `java-spring-gradle` | Java 21 / Spring Boot 3 / Gradle |
 | `java-quarkus` | Java 21 / Quarkus 3 / Gradle |
 | `dotnet-aspnet` | .NET 8 / ASP.NET Core |
 | `python-fastapi` | Python 3.12 / FastAPI |
@@ -49,6 +50,7 @@ cd claude-template
 | `flutter` | Flutter / Dart |
 | `monorepo` | Nx or Turborepo |
 | `frontend` | Vue 3 / Angular / React |
+| `sre` | SRE / Infrastructure as Code (Terraform, Kubernetes) |
 
 **Example:**
 ```bash

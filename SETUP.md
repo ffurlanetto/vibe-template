@@ -29,6 +29,7 @@ template/
     │   └── debug.md                   # /debug
     └── presets/
         ├── java-spring.md             # Java / Spring Boot
+        ├── java-spring-gradle.md      # Java / Spring Boot / Gradle
         ├── java-quarkus.md            # Java / Quarkus / Gradle
         ├── dotnet-aspnet.md           # .NET / ASP.NET Core
         ├── python-fastapi.md          # Python / FastAPI
@@ -39,7 +40,8 @@ template/
         ├── react-native.md            # React Native (Expo / CLI)
         ├── flutter.md                 # Flutter / Dart
         ├── monorepo.md                # Monorepo (Nx / Turborepo)
-        └── frontend.md               # Vue 3 / Angular / React
+        ├── frontend.md               # Vue 3 / Angular / React
+        └── sre.md                    # SRE / Infrastructure as Code
 ```
 
 ---
@@ -58,7 +60,7 @@ template/
 ./init.sh frontend-app frontend ~/projects/frontend-app
 ```
 
-**Available stacks:** `java-spring` · `java-quarkus` · `dotnet-aspnet` · `python-fastapi` · `go` · `nestjs` · `rust` · `rails` · `react-native` · `flutter` · `monorepo` · `frontend`
+**Available stacks:** `java-spring` · `java-spring-gradle` · `java-quarkus` · `dotnet-aspnet` · `python-fastapi` · `go` · `nestjs` · `rust` · `rails` · `react-native` · `flutter` · `monorepo` · `frontend` · `sre`
 
 The script automatically creates:
 - The full directory structure

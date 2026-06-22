@@ -10,7 +10,7 @@ A drop-in `.claude/` configuration that turns Claude Code into a disciplined eng
 
 - **Plan-first workflow** — Claude generates a structured plan and waits for your approval before writing a single line of code
 - **Built-in security hooks** — hardcoded secret detection on every file write and before every commit
-- **Stack-specific presets** — opinionated conventions for 12 tech stacks, ready to paste
+- **Stack-specific presets** — opinionated conventions for 14 tech stacks, ready to paste
 - **Slash commands** — `/plan`, `/review`, `/security-audit`, `/debug`, `/adr` wired up and ready
 - **ADR + spec templates** — architectural decisions and functional specs as first-class artifacts
 
@@ -43,6 +43,7 @@ claude
 | Stack | Technology |
 |-------|-----------|
 | `java-spring` | Java 21 / Spring Boot 3 |
+| `java-spring-gradle` | Java 21 / Spring Boot 3 / Gradle |
 | `java-quarkus` | Java 21 / Quarkus 3 / Gradle |
 | `dotnet-aspnet` | .NET 8 / ASP.NET Core |
 | `python-fastapi` | Python 3.12 / FastAPI |
@@ -54,6 +55,7 @@ claude
 | `flutter` | Flutter / Dart |
 | `monorepo` | Nx or Turborepo |
 | `frontend` | Vue 3 / Angular 17+ / React 18+ |
+| `sre` | SRE / Infrastructure as Code (Terraform, Kubernetes) |
 
 ---
 
@@ -107,7 +109,7 @@ template/
 │   │   ├── security-audit.md          # /security-audit
 │   │   └── debug.md                   # /debug
 │   └── presets/                       # Stack-specific conventions
-│       └── [11 preset files]
+│       └── [13 preset files]
 ├── .github/
 │   └── workflows/
 │       └── quality-gate.yml           # CI pipeline template
