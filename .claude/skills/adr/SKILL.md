@@ -1,5 +1,8 @@
 ---
-description: Create a numbered ADR in docs/adr/ — use before any architectural decision
+name: adr
+description: Create a numbered Architecture Decision Record in docs/adr/. Use before implementing any architectural decision — new dependency, data model, integration, or cross-cutting pattern.
+argument-hint: [decision to document]
+allowed-tools: Read, Glob, Write, Edit
 ---
 
 Create an Architecture Decision Record for the following decision.
@@ -10,6 +13,9 @@ Create an Architecture Decision Record for the following decision.
 3. Fill all sections with the provided context
 4. Update the table in `docs/adr/README.md`
 5. Confirm the path and number of the created file
+
+An ADR is written **before** implementation and is never rewritten afterwards —
+it is superseded by a new ADR instead.
 
 ---
 
