@@ -19,7 +19,7 @@ CMD_DEV="${CMD_DEV//@@PROJECT_CAMEL@@/$PROJECT_CAMEL}"
 stack_generate() {
   [[ -n "$(find "$DEST" -maxdepth 2 -name '*.csproj' 2>/dev/null)" ]] && { skip "a .csproj already exists"; return 0; }
   $DRY_RUN && { skip "would run dotnet new"; return 0; }
-  ( cd "$DEST" \
+  ( cd "$GEN_DIR" \
     && dotnet new sln --name "$PROJECT_CAMEL" >/dev/null 2>&1 \
     && dotnet new webapi -o "src/${PROJECT_CAMEL}.Api" >/dev/null 2>&1 \
     && dotnet new xunit -o "tests/${PROJECT_CAMEL}.UnitTests" >/dev/null 2>&1 \

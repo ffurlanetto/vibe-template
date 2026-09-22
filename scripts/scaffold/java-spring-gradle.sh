@@ -23,7 +23,7 @@ stack_generate() {
 &groupId=com.example&artifactId=${PROJECT_KEBAB}&name=${PROJECT_KEBAB}\
 &packageName=com.example.${PROJECT_SNAKE}\
 &dependencies=web,actuator,validation" \
-    | tar -xz -C "$DEST" >/dev/null 2>&1 || return 1
+    | tar -xz -C "$GEN_DIR" >/dev/null 2>&1 || return 1
 }
 
 # Spring Boot application code is identical whatever the build tool: reuse the

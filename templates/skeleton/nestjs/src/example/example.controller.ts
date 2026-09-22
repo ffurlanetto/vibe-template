@@ -8,9 +8,9 @@ import {
   Post,
 } from '@nestjs/common';
 
-import { CreateExampleDto } from './example.dto';
-import { Example } from './example.repository';
-import { DuplicateExampleNameError, ExampleNotFoundError, ExampleService } from './example.service';
+import { CreateExampleDto } from './example.dto.js';
+import type { Example } from './example.repository.js';
+import { DuplicateExampleNameError, ExampleNotFoundError, ExampleService } from './example.service.js';
 
 /**
  * HTTP layer of the example slice. Expected domain errors become status codes

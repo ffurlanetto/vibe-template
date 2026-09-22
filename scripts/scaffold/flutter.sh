@@ -16,5 +16,5 @@ CMD_AUDIT="flutter pub outdated"
 stack_generate() {
   [[ -f "$DEST/pubspec.yaml" ]] && { skip "pubspec.yaml already present"; return 0; }
   $DRY_RUN && { skip "would run flutter create"; return 0; }
-  ( cd "$DEST" && flutter create --project-name "$PROJECT_SNAKE" . >/dev/null 2>&1 ) || return 1
+  ( cd "$GEN_DIR" && flutter create --project-name "$PROJECT_SNAKE" . >/dev/null 2>&1 ) || return 1
 }

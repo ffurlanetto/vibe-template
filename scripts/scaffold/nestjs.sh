@@ -20,7 +20,7 @@ stack_generate() {
   [[ -f "$DEST/package.json" ]] && { skip "package.json already present"; return 0; }
   $DRY_RUN && { skip "would run nest new"; return 0; }
   # `new .` would name the project after the directory; name it explicitly.
-  ( cd "$DEST" && npx --yes @nestjs/cli@latest new "$PROJECT_KEBAB" --directory . \
+  ( cd "$GEN_DIR" && npx --yes @nestjs/cli@latest new "$PROJECT_KEBAB" --directory . \
       --package-manager npm --skip-git --skip-install >/dev/null 2>&1 ) || return 1
 }
 
@@ -39,8 +39,8 @@ module = root / "src" / "app.module.ts"
 if module.exists():
     text = module.read_text(encoding="utf-8")
     if "HealthModule" not in text:
-        text = ("import { ExampleModule } from './example/example.module';\n"
-                "import { HealthModule } from './health/health.module';\n") + text
+        text = ("import { ExampleModule } from './example/example.module.js';\n"
+                "import { HealthModule } from './health/health.module.js';\n") + text
         text = re.sub(r"imports:\s*\[([^\]]*)\]",
                       lambda m: "imports: [HealthModule, ExampleModule%s]" % (
                           ", " + m.group(1).strip() if m.group(1).strip() else ""),
@@ -48,6 +48,14 @@ if module.exists():
         if "imports:" not in text:
             text = text.replace("@Module({", "@Module({\n  imports: [HealthModule, ExampleModule],", 1)
         module.write_text(text, encoding="utf-8")
+
+# The CLI's own e2e spec imports 'supertest/types', which NodeNext cannot
+# resolve without the extension. Generator boilerplate, so it is ours to fix.
+e2e = root / "test" / "app.e2e-spec.ts"
+if e2e.exists():
+    text = e2e.read_text(encoding="utf-8")
+    if "'supertest/types'" in text:
+        e2e.write_text(text.replace("'supertest/types'", "'supertest/types.js'"), encoding="utf-8")
 
 main = root / "src" / "main.ts"
 if main.exists():
@@ -69,6 +77,7 @@ PY
     && npm pkg set dependencies.class-validator="^0.14.1" >/dev/null 2>&1 \
     && npm pkg set dependencies.class-transformer="^0.5.1" >/dev/null 2>&1 \
     && npm pkg set devDependencies.supertest="^7.0.0" >/dev/null 2>&1 \
-    && npm pkg set devDependencies.@types/supertest="^6.0.2" >/dev/null 2>&1 ) || \
+    && npm pkg set devDependencies.@types/supertest="^6.0.2" >/dev/null 2>&1 \
+    ) || \
     warn "could not declare class-validator/supertest in package.json"
 }

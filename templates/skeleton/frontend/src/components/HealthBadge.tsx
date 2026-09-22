@@ -16,7 +16,7 @@ export interface HealthBadgeProps {
  * The walking skeleton's visible end: it proves the app, the client and the API
  * contract line up (SPEC-001).
  */
-export function HealthBadge({ apiBaseUrl }: HealthBadgeProps): JSX.Element {
+export function HealthBadge({ apiBaseUrl }: HealthBadgeProps) {
   const [status, setStatus] = useState<Status>('loading');
 
   useEffect(() => {

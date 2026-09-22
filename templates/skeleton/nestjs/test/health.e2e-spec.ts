@@ -2,8 +2,8 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { ExampleModule } from '../src/example/example.module';
-import { HealthModule } from '../src/health/health.module';
+import { ExampleModule } from '../src/example/example.module.js';
+import { HealthModule } from '../src/health/health.module.js';
 
 /** Integration tests for the health endpoints and the example slice (SPEC-001). */
 describe('Health and example endpoints', () => {

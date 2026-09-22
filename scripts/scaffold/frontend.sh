@@ -21,17 +21,17 @@ stack_generate() {
   [[ -f "$DEST/package.json" ]] && { skip "package.json already present"; return 0; }
   $DRY_RUN && { skip "would scaffold the ${FRONTEND_VARIANT} app"; return 0; }
   case "$FRONTEND_VARIANT" in
-    react)   ( cd "$DEST" && npx --yes create-vite@latest . --template react-ts >/dev/null 2>&1 ) || return 1
-             # Declare the test tooling; `make install` resolves it in one pass.
-             ( cd "$DEST" \
+    react)   ( cd "$GEN_DIR" && npx --yes create-vite@latest . --template react-ts >/dev/null 2>&1 ) || return 1
+             # Declare the test tooling only — the generator owns scripts.lint.
+             # `make install` resolves everything in one pass.
+             ( cd "$GEN_DIR" \
                && npm pkg set scripts.test="vitest run" >/dev/null 2>&1 \
-               && npm pkg set scripts.lint="eslint ." >/dev/null 2>&1 \
                && npm pkg set devDependencies.vitest="^2.1.8" >/dev/null 2>&1 \
                && npm pkg set devDependencies.jsdom="^25.0.1" >/dev/null 2>&1 \
                && npm pkg set devDependencies.@testing-library/react="^16.1.0" >/dev/null 2>&1 \
                && npm pkg set devDependencies.@testing-library/jest-dom="^6.6.3" >/dev/null 2>&1 ) ;;
-    vue)     ( cd "$DEST" && npx --yes create-vite@latest . --template vue-ts >/dev/null 2>&1 ) || return 1 ;;
-    angular) ( cd "$DEST" && npx --yes @angular/cli@latest new "$PROJECT_KEBAB" --directory . \
+    vue)     ( cd "$GEN_DIR" && npx --yes create-vite@latest . --template vue-ts >/dev/null 2>&1 ) || return 1 ;;
+    angular) ( cd "$GEN_DIR" && npx --yes @angular/cli@latest new "$PROJECT_KEBAB" --directory . \
                  --skip-git --skip-install --style=css --routing >/dev/null 2>&1 ) || return 1 ;;
     *) warn "unknown FRONTEND_VARIANT '$FRONTEND_VARIANT'"; return 1 ;;
   esac

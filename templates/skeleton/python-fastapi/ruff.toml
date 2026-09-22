@@ -5,6 +5,13 @@ target-version = "py312"
 line-length = 100
 src = ["src", "tests"]
 
+# Vendored agent tooling: shipped by the template, linted in its own repository.
+extend-exclude = [
+  ".claude",
+  ".opencode",
+  "scripts/sync-opencode.py",
+]
+
 [lint]
 select = [
   "E", "W",    # pycodestyle

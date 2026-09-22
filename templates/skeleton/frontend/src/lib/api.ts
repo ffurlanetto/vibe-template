@@ -8,13 +8,13 @@
 
 /** An HTTP call that did not produce a usable response. */
 export class ApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number | null,
-    options?: { cause?: unknown },
-  ) {
+  /** The HTTP status, or null when the request never reached the server. */
+  readonly status: number | null;
+
+  constructor(message: string, status: number | null, options?: { cause?: unknown }) {
     super(message, options);
     this.name = 'ApiError';
+    this.status = status;
   }
 }
 

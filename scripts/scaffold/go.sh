@@ -17,7 +17,7 @@ CMD_AUDIT="go vet ./... && (command -v govulncheck >/dev/null && govulncheck ./.
 stack_generate() {
   [[ -f "$DEST/go.mod" ]] && { skip "go.mod already present"; return 0; }
   $DRY_RUN && { skip "would run go mod init"; return 0; }
-  ( cd "$DEST" && go mod init "$PROJECT_KEBAB" >/dev/null 2>&1 ) || return 1
+  ( cd "$GEN_DIR" && go mod init "$PROJECT_KEBAB" >/dev/null 2>&1 ) || return 1
 }
 
 stack_overlay() {

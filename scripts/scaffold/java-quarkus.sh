@@ -21,7 +21,7 @@ stack_generate() {
   curl -fsSL "https://code.quarkus.io/d\
 ?b=GRADLE_KOTLIN_DSL&j=21&g=com.example&a=${PROJECT_KEBAB}\
 &e=rest-jackson&e=smallrye-health&e=hibernate-validator&e=opentelemetry" \
-    -o "$DEST/.quarkus.zip" >/dev/null 2>&1 || return 1
-  ( cd "$DEST" && unzip -qo .quarkus.zip && cp -rn "${PROJECT_KEBAB}/." . 2>/dev/null; \
+    -o "$GEN_DIR/.quarkus.zip" >/dev/null 2>&1 || return 1
+  ( cd "$GEN_DIR" && unzip -qo .quarkus.zip && cp -rn "${PROJECT_KEBAB}/." . 2>/dev/null; \
     rm -rf "${PROJECT_KEBAB}" .quarkus.zip ) || return 1
 }

@@ -16,7 +16,7 @@ CMD_AUDIT="cargo audit || echo 'cargo-audit not installed: cargo install cargo-a
 stack_generate() {
   [[ -f "$DEST/Cargo.toml" ]] && { skip "Cargo.toml already present"; return 0; }
   $DRY_RUN && { skip "would run cargo init"; return 0; }
-  ( cd "$DEST" && cargo init --name "$PROJECT_SNAKE" >/dev/null 2>&1 \
+  ( cd "$GEN_DIR" && cargo init --name "$PROJECT_SNAKE" >/dev/null 2>&1 \
     && cargo add axum tokio --features tokio/full >/dev/null 2>&1 \
     && cargo add tracing tracing-subscriber >/dev/null 2>&1 ) || return 1
 }

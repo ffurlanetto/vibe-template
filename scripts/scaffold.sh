@@ -114,17 +114,38 @@ info "Scaffolding ${STACK} (${STACK_LABEL}) — tier ${STACK_TIER}, mode ${MODE}
 [[ "$MODE" == "none" ]] && { success "Scaffolding skipped (--scaffold none)"; exit 0; }
 
 # ── Layer 1 — framework boilerplate, from the official generator ─────────────
+#
+# Generators are run in an empty scratch directory and merged in afterwards:
+# most of them (create-vite, rails new, cargo init) refuse to write into a
+# directory that already holds files, and by this point the agent configuration
+# is already there. The merge never clobbers an existing file.
 GENERATED=false
+GEN_DIR=""
 if [[ "$MODE" == "full" ]]; then
   MISSING=""
   # shellcheck disable=SC2086  # STACK_REQUIRES is a deliberate word list
   for tool in ${STACK_REQUIRES:-}; do have "$tool" || MISSING="$MISSING $tool"; done
   if [[ -z "$MISSING" ]]; then
     info "Layer 1 — running the ${STACK} generator"
-    if stack_generate; then GENERATED=true; else warn "generator failed — falling back to the minimal layout"; fi
+    GEN_DIR="$(mktemp -d)"
+    trap 'rm -rf "$GEN_DIR"' EXIT
+    if stack_generate; then
+      GENERATED=true
+      if ! $DRY_RUN && [[ -n "$(ls -A "$GEN_DIR" 2>/dev/null)" ]]; then
+        # A generator's repository and its environment directories stay behind:
+        # .git would graft a foreign history onto the project, and a virtualenv
+        # or node_modules built in a temp path is broken once moved.
+        rm -rf "$GEN_DIR/.git" "$GEN_DIR/.venv" "$GEN_DIR/node_modules" \
+               "$GEN_DIR/target" "$GEN_DIR/.gradle" "$GEN_DIR/vendor"
+        cp -rn "$GEN_DIR/." "$DEST/" 2>/dev/null || true
+      fi
+    else
+      warn "generator failed — falling back to the committed build files"
+    fi
+    rm -rf "$GEN_DIR"
   else
     warn "missing toolchain:${MISSING} — skipping the official generator"
-    warn "install it and re-run, or keep the minimal layout below"
+    warn "install it and re-run, or keep the fallback build files below"
   fi
 fi
 

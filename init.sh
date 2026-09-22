@@ -153,7 +153,7 @@ fi
 
 copy ".github/workflows/quality-gate.yml"
 copy ".github/PULL_REQUEST_TEMPLATE.md"
-copy ".gitignore"
+copy "templates/common/.gitignore" ".gitignore"
 
 # ── Project identity ─────────────────────────────────────────────────────────
 info "Project identity"

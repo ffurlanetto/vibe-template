@@ -1,9 +1,9 @@
-import { InMemoryExampleRepository } from '../src/example/example.repository';
+import { InMemoryExampleRepository } from '../src/example/example.repository.js';
 import {
   DuplicateExampleNameError,
   ExampleNotFoundError,
   ExampleService,
-} from '../src/example/example.service';
+} from '../src/example/example.service.js';
 
 /** Unit tests. Naming: Subject_Scenario_ExpectedResult (AGENTS.md A4). */
 describe('ExampleService', () => {

@@ -19,9 +19,9 @@ STACK_DIRS="${STACK_DIRS//@@PROJECT_SNAKE@@/$PROJECT_SNAKE}"
 
 stack_generate() {
   [[ -f "$DEST/pyproject.toml" ]] && { skip "pyproject.toml already present"; return 0; }
-  run uv init --package --name "$PROJECT_KEBAB" --directory "$DEST" >/dev/null 2>&1 || return 1
+  run uv init --package --name "$PROJECT_KEBAB" --directory "$GEN_DIR" >/dev/null 2>&1 || return 1
   $DRY_RUN && return 0
-  ( cd "$DEST" && uv add fastapi "uvicorn[standard]" pydantic-settings >/dev/null 2>&1 \
+  ( cd "$GEN_DIR" && uv add fastapi "uvicorn[standard]" pydantic-settings >/dev/null 2>&1 \
     && uv add --dev pytest pytest-asyncio pytest-cov httpx ruff mypy >/dev/null 2>&1 )
 }
 

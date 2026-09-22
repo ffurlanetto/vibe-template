@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 
-import { ExampleController } from './example.controller';
-import { ExampleRepository, InMemoryExampleRepository } from './example.repository';
-import { ExampleService } from './example.service';
+import { ExampleController } from './example.controller.js';
+import { ExampleRepository, InMemoryExampleRepository } from './example.repository.js';
+import { ExampleService } from './example.service.js';
 
 /** Wires the example slice: controller -> service -> repository. */
 @Module({

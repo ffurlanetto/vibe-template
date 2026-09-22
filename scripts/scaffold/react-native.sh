@@ -16,5 +16,5 @@ CMD_AUDIT="npm audit --audit-level=high"
 stack_generate() {
   [[ -f "$DEST/package.json" ]] && { skip "package.json already present"; return 0; }
   $DRY_RUN && { skip "would run create-expo-app"; return 0; }
-  ( cd "$DEST" && npx --yes create-expo-app@latest . --template blank-typescript >/dev/null 2>&1 ) || return 1
+  ( cd "$GEN_DIR" && npx --yes create-expo-app@latest . --template blank-typescript >/dev/null 2>&1 ) || return 1
 }

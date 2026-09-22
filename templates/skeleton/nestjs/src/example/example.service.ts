@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { Example, ExampleRepository } from './example.repository';
+import { Example, ExampleRepository } from './example.repository.js';
 
 /** Raised when the requested name is already taken — an expected error. */
 export class DuplicateExampleNameError extends Error {
