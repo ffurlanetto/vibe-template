@@ -1,0 +1,42 @@
+# Ruff — linter and formatter (replaces flake8, isort, pyupgrade, black).
+# See AGENTS.md B3 for the conventions these rules enforce.
+
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[lint]
+select = [
+  "E", "W",    # pycodestyle
+  "F",         # pyflakes
+  "I",         # isort
+  "B",         # flake8-bugbear
+  "UP",        # pyupgrade
+  "SIM",       # flake8-simplify
+  "S",         # flake8-bandit — security (AGENTS.md A5)
+  "T20",       # flake8-print — no print() in production code (A3)
+  "D",         # pydocstyle — public exports are documented (A6)
+]
+ignore = [
+  "D203",      # incompatible with D211
+  "D213",      # incompatible with D212
+]
+
+[lint.per-file-ignores]
+# Tests may assert, need no module docstring on every case, and use fixtures.
+"tests/**" = ["S101", "D103", "D100"]
+
+[lint.flake8-bugbear]
+# FastAPI's dependency injection is declared in argument defaults by design.
+extend-immutable-calls = [
+  "fastapi.Depends",
+  "fastapi.Query",
+  "fastapi.Path",
+  "fastapi.Header",
+  "fastapi.Body",
+  "fastapi.Form",
+  "fastapi.File",
+]
+
+[lint.pydocstyle]
+convention = "google"
