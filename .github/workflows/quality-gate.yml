@@ -83,12 +83,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   dependencies:
-    name: Dependency review
+    name: Dependency audit
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    if: github.event_name == 'pull_request'
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high
+
+      # Same toolchain block as the quality job — uncomment what your stack needs.
+
+      - name: Install dependencies
+        run: make install
+
+      # Stack-native audit (AGENTS.md A13). It works on any repository, unlike
+      # the GitHub action below, which hard-fails where Dependency graph is off.
+      - name: Audit
+        run: make audit
+
+      # Optional extra: GitHub's dependency review on pull requests. It needs
+      # Dependency graph enabled on the repository (Settings → Code security),
+      # and fails the job outright when it is not — so it is opt-in.
+      # - uses: actions/dependency-review-action@v4
+      #   if: github.event_name == 'pull_request'
+      #   with:
+      #     fail-on-severity: high
