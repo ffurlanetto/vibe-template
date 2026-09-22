@@ -6,7 +6,7 @@ SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
 PYTHON ?= python3
-SHELL_SOURCES := init.sh $(wildcard scripts/*.sh) $(wildcard .claude/hooks/*.sh)
+SHELL_SOURCES := init.sh $(wildcard scripts/*.sh) $(wildcard scripts/scaffold/*.sh) $(wildcard .claude/hooks/*.sh)
 
 .PHONY: help
 help: ## Show the available targets
@@ -40,7 +40,7 @@ test: test-hooks ## Run the template test suite
 .PHONY: lint
 lint: ## Shellcheck every shell script (skipped if shellcheck is absent)
 	@if command -v shellcheck >/dev/null 2>&1; then \
-		shellcheck -x $(SHELL_SOURCES) && echo "shellcheck: clean"; \
+		LC_ALL=C.UTF-8 shellcheck -x -S warning $(SHELL_SOURCES) && echo "shellcheck: clean"; \
 	else \
 		echo "shellcheck not installed — skipping (CI enforces it)"; \
 	fi

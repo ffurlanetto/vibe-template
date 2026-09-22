@@ -1,4 +1,6 @@
 # shellcheck shell=bash
+# Stack module: sourced by scripts/scaffold.sh, which consumes every variable below.
+# shellcheck disable=SC2034
 STACK_TIER="A"
 STACK_LABEL="Go 1.23 / chi"
 STACK_REQUIRES="go"

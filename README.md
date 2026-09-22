@@ -1,123 +1,155 @@
-# Claude Code Template
+# Vibe Template
 
-A production-ready project template for AI-assisted development with Claude Code. Enforces structured workflows, security guardrails, and engineering standards across any tech stack — from day one.
+A project template for teams who develop with AI coding agents — and want the
+result to look like engineering rather than autocomplete.
 
----
-
-## What this is
-
-A drop-in `.claude/` configuration that turns Claude Code into a disciplined engineering partner:
-
-- **Plan-first workflow** — Claude generates a structured plan and waits for your approval before writing a single line of code
-- **Built-in security hooks** — hardcoded secret detection on every file write and before every commit
-- **Stack-specific presets** — opinionated conventions for 14 tech stacks, ready to paste
-- **Slash commands** — `/plan`, `/review`, `/security-audit`, `/debug`, `/adr` wired up and ready
-- **ADR + spec templates** — architectural decisions and functional specs as first-class artifacts
+Bootstrap a project in two minutes and get, from the first commit: a plan-first
+workflow both **Claude Code** and **opencode** obey, security guardrails enforced
+outside the model, and a skeleton that already runs, already tests itself, and
+whose quality gate is already green.
 
 ---
 
 ## Quick start
 
 ```bash
-# Bootstrap a new project in ~2 minutes
-./init.sh <project-name> <stack>
-
-# Examples
 ./init.sh payment-api python-fastapi
-./init.sh mobile-app flutter ~/projects/mobile-app
-./init.sh platform monorepo
+cd payment-api
+make install && make check     # green, on a project nobody has written yet
 ```
 
-Then complete sections B1–B8 in `CLAUDE.md` and open a Claude session:
+Then complete sections B1–B8 of `AGENTS.md`, open an agent session, and type
+`/prime`.
 
 ```bash
-cd <project-name>
-claude
-# → /plan Create a GET /health endpoint
+./init.sh <name> <stack> [destination] [options]
+
+  --scaffold full|structure|none   how much code to generate (default: full)
+  --agent both|claude|opencode     which agents to configure (default: both)
+  --variant react|vue|angular      frontend stack only (default: react)
+  --yes                            never prompt
+  --dry-run                        list the actions, write nothing
 ```
+
+Nothing existing is ever overwritten, so running `init.sh` on a live project
+only adds what is missing.
+
+---
+
+## What you get
+
+**A plan-first workflow.** No implementation before an approved plan, and the
+plan is a contract: any deviation is flagged and re-approved.
+
+**Twelve skills**, invoked with `/name` and read by *both* agents:
+
+| | | |
+|---|---|---|
+| `/plan` | `/spec` | `/adr` |
+| `/tdd` | `/debug` | `/review` |
+| `/security-audit` | `/deps-audit` | `/perf-audit` |
+| `/commit` | `/pr` | `/prime` |
+
+**Six subagents** with isolated context — `architect`, `code-reviewer`,
+`security-auditor`, `test-engineer`, `debugger`, `docs-writer`. The auditors are
+read-only by construction: they have no `Write` tool at all.
+
+**Guardrails the model cannot talk its way past.** A hook scans every file
+written for hardcoded secrets, and a second one **blocks** a commit whose staged
+diff contains one. Both run outside the model, back both agents, and are covered
+by their own test suite (`make test-hooks`).
+
+**A walking skeleton.** `/health/live` and `/health/ready` per a seed spec, one
+vertical slice (route → service → repository behind an interface), structured
+JSON logging, configuration read from the environment, and the unit and
+integration tests for all of it.
+
+**One command contract.** `make install test lint typecheck build dev audit check`
+— identical across all fourteen stacks, which is why the CI pipeline never needs
+to know your language.
 
 ---
 
 ## Supported stacks
 
-| Stack | Technology |
-|-------|-----------|
-| `java-spring` | Java 21 / Spring Boot 3 |
-| `java-spring-gradle` | Java 21 / Spring Boot 3 / Gradle |
-| `java-quarkus` | Java 21 / Quarkus 3 / Gradle |
-| `dotnet-aspnet` | .NET 8 / ASP.NET Core |
-| `python-fastapi` | Python 3.12 / FastAPI |
-| `go` | Go 1.23 / chi |
-| `nestjs` | Node.js 22 / NestJS |
-| `rust` | Rust / axum |
-| `rails` | Ruby 3.3 / Rails 7 |
-| `react-native` | React Native (Expo or CLI) |
-| `flutter` | Flutter / Dart |
-| `monorepo` | Nx or Turborepo |
-| `frontend` | Vue 3 / Angular 17+ / React 18+ |
-| `sre` | SRE / Infrastructure as Code (Terraform, Kubernetes) |
+★ ships a walking skeleton that runs and is tested; the rest ship the official
+generator's output plus the imposed architecture, the wired `Makefile` and a
+green pipeline.
+
+| Stack | Technology | |
+|-------|-----------|---|
+| `python-fastapi` | Python 3.12 / FastAPI | ★ |
+| `go` | Go 1.23 | ★ |
+| `nestjs` | Node.js 22 / NestJS | ★ |
+| `frontend` | React 18 + Vite + TS (Vue, Angular via `--variant`) | ★ |
+| `java-spring` | Java 21 / Spring Boot 3 / Maven | ★ |
+| `java-spring-gradle` | Java 21 / Spring Boot 3 / Gradle | ★ |
+| `java-quarkus` | Java 21 / Quarkus 3 / Gradle | ★ |
+| `dotnet-aspnet` | .NET 8 / ASP.NET Core | |
+| `rust` | Rust / axum | |
+| `rails` | Ruby 3.3 / Rails 7 | |
+| `react-native` | React Native / Expo | |
+| `flutter` | Flutter / Dart | |
+| `monorepo` | Nx or Turborepo | |
+| `sre` | Terraform + Kubernetes | |
+
+Promoting a stack to ★ is documented in [`docs/SCAFFOLD.md`](docs/SCAFFOLD.md).
 
 ---
 
-## How it works
+## Two agents, one source of truth
 
-```
-CLAUDE.md
-├── Part A — Common kernel (DO NOT MODIFY)
-│   ├── A1  Plan-first rule
-│   ├── A2  Implementation plan format
-│   ├── A3  Universal development standards
-│   ├── A4  Testing rules
-│   ├── A5  Security checklist
-│   ├── A6  Documentation standards
-│   ├── A7  Available slash commands
-│   ├── A8  Observability
-│   ├── A9  AI-assisted development best practices
-│   └── A10 Performance
-└── Part B — Project configuration (FILL IN PER PROJECT)
-    ├── B1  Project identity
-    ├── B2  Tech stack
-    ├── B3  Language/framework standards (paste preset here)
-    ├── B4  Development commands
-    ├── B5  Project architecture
-    ├── B6  Project-specific constraints
-    ├── B7  External integrations
-    └── B8  Team context & workflow
-```
+Claude Code and opencode disagree about where configuration lives. The template
+resolves that with one rule: **one source per concept, everything else generated.**
 
-Part A is the shared kernel — never modified per project. Part B is filled in once per project and kept up to date as the source of truth for every Claude session.
+| Concept | Source | Generated |
+|---|---|---|
+| Instructions | `AGENTS.md` | `CLAUDE.md` imports it with `@AGENTS.md` |
+| Skills | `.claude/skills/` | — *(opencode reads them natively)* |
+| Subagents | `.claude/agents/` | `.opencode/agents/` |
+| Commands | the skills | `.opencode/commands/` |
+| Permissions | `.claude/settings.json` | `opencode.json` → `permission` |
+| Guardrails | `.claude/hooks/*.sh` | called by `.opencode/plugins/guardrails.js` |
+
+`make sync` regenerates; `make check-sync` fails the build if the two sides
+drifted. Details and the traps to avoid: [`docs/DUAL-AGENT.md`](docs/DUAL-AGENT.md).
 
 ---
 
-## What's included
+## How the configuration is organised
 
 ```
-template/
-├── README.md                          ← you are here
-├── CLAUDE.md                          # Main configuration
-├── SETUP.md                           # Detailed usage guide
-├── INSTALL-DEV.md                     # Installation guide for developers
-├── INSTALL-AGENT.md                   # Installation guide for LLM agents
-├── init.sh                            # Automated bootstrap script
-├── VERSION                            # Template version
-├── .claude/
-│   ├── settings.json                  # Permissions + security hooks
-│   ├── commands/                      # Slash commands
-│   │   ├── plan.md                    # /plan
-│   │   ├── adr.md                     # /adr
-│   │   ├── review.md                  # /review
-│   │   ├── security-audit.md          # /security-audit
-│   │   └── debug.md                   # /debug
-│   └── presets/                       # Stack-specific conventions
-│       └── [13 preset files]
-├── .github/
-│   └── workflows/
-│       └── quality-gate.yml           # CI pipeline template
-└── docs/
-    ├── adr/
-    │   └── README.md                  # ADR index
-    └── specs/
-        └── SPEC-TEMPLATE.md           # Functional specification template
+AGENTS.md
+├── Part A — Common kernel (do not modify per project)
+│   ├── A1  Plan first          A7  Available skills
+│   ├── A2  Plan format         A8  Observability
+│   ├── A3  Development standards  A9  AI-assisted development
+│   ├── A4  Testing rules       A10 Performance
+│   ├── A5  Security checklist  A11 Context engineering & agentic workflows
+│   ├── A6  Documentation       A12 LLM features in the product
+│   │                           A13 Supply chain
+└── Part B — Project configuration (fill in once, keep current)
+    B1 identity · B2 stack · B3 conventions · B4 commands
+    B5 architecture · B6 constraints · B7 integrations · B8 workflow
+```
+
+---
+
+## What's in the box
+
+```
+AGENTS.md · CLAUDE.md · opencode.json · Makefile · init.sh
+.claude/
+  skills/      12 skills, shared by both agents
+  agents/      6 subagents
+  hooks/       guardrail scripts (stdin JSON or argv)
+  presets/     14 stack conventions for section B3
+  settings.json
+.opencode/     generated — agents, commands, guardrail plugin
+scripts/       scaffolder, generator, three test suites
+templates/     common overlay + 7 walking skeletons
+docs/          adr/ · specs/ · runbooks/ · DUAL-AGENT.md · SCAFFOLD.md
+.github/       quality-gate.yml · template-ci.yml · PR template
 ```
 
 ---
@@ -125,42 +157,29 @@ template/
 ## Daily workflow
 
 ```
-Write a request
-      ↓
-/plan → plan submitted for approval
-      ↓
-Reply "ok" / "proceed"
-      ↓
-Step-by-step implementation
-      ↓
-/review → 🟢 PASS / 🟡 ATTENTION / 🔴 BLOCKING
-      ↓
-Commit only if PASS
+request → /plan → "ok" → implementation → /review → /commit → /pr
+                                  ↑
+                     hooks refuse the commit if a secret slipped in
 ```
 
 ---
 
-## Security hooks (active by default)
+## Installing
 
-| Hook | Trigger | Action |
-|------|---------|--------|
-| PostToolUse | After any file write | Scans for hardcoded secrets — warning |
-| PreToolUse | Before `git commit` | Scans staged files — **blocks commit** if secret found |
+- Developers → [`INSTALL-DEV.md`](INSTALL-DEV.md)
+- Agents and automation → [`INSTALL-AGENT.md`](INSTALL-AGENT.md)
+- Day-to-day usage → [`SETUP.md`](SETUP.md)
+- Upgrading from v2 → [`CHANGELOG.md`](CHANGELOG.md)
 
-Requires Python 3 (available on any modern development environment).
-
----
-
-## Installation
-
-- **Developers** → see [`INSTALL-DEV.md`](INSTALL-DEV.md)
-- **LLM agents / automation** → see [`INSTALL-AGENT.md`](INSTALL-AGENT.md)
-- **Detailed usage** → see [`SETUP.md`](SETUP.md)
+Requires `bash`, `git`, `make` and `python3`. Everything else depends on your stack.
 
 ---
 
-## Template version
+## Contributing to the template
 
-Current version: `2.0.0`
+```bash
+make check     # validate + lint + typecheck + hook tests + init.sh tests + sync check
+make demo STACK=go
+```
 
-Each bootstrapped project stores its template version in `.claude/.template-version` for traceability.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Current version: **3.0.0**.

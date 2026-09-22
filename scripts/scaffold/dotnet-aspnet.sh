@@ -1,4 +1,6 @@
 # shellcheck shell=bash
+# Stack module: sourced by scripts/scaffold.sh, which consumes every variable below.
+# shellcheck disable=SC2034
 STACK_TIER="B"
 STACK_LABEL=".NET 8 / ASP.NET Core"
 STACK_REQUIRES="dotnet"

@@ -1,4 +1,6 @@
 # shellcheck shell=bash
+# Stack module: sourced by scripts/scaffold.sh, which consumes every variable below.
+# shellcheck disable=SC2034
 STACK_TIER="A"
 STACK_LABEL="Java 21 / Spring Boot 3 / Maven"
 STACK_REQUIRES="curl"

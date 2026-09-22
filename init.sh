@@ -1,167 +1,220 @@
 #!/usr/bin/env bash
-# init.sh — Bootstrap a new project from the Claude Code template
+# init.sh — bootstrap a project configured for Claude Code and opencode,
+# with a skeleton that already runs and tests itself.
+#
+#   ./init.sh <project-name> <stack> [destination] [options]
+#
+# Options:
+#   --scaffold full|structure|none   how much code to generate (default: full)
+#   --agent both|claude|opencode     which agents to configure (default: both)
+#   --variant react|vue|angular      frontend stack only (default: react)
+#   --yes                            never prompt
+#   --dry-run                        list the actions, write nothing
+#
+# Nothing existing is ever overwritten.
 set -euo pipefail
 
-# ── Colors ────────────────────────────────────────────────────────────────────
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+TEMPLATE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; NC='\033[0m'
 info()    { echo -e "${CYAN}→${NC} $*"; }
 success() { echo -e "${GREEN}✓${NC} $*"; }
 warn()    { echo -e "${YELLOW}⚠${NC}  $*"; }
-error()   { echo -e "${RED}✗${NC} $*"; exit 1; }
+error()   { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
 
-# ── Available stacks ──────────────────────────────────────────────────────────
-STACKS=("java-spring" "java-spring-gradle" "java-quarkus" "dotnet-aspnet" "python-fastapi" "go" "nestjs" "rust" "rails" "react-native" "flutter" "monorepo" "frontend" "sre")
+STACKS=(java-spring java-spring-gradle java-quarkus dotnet-aspnet python-fastapi go nestjs rust rails react-native flutter monorepo frontend sre)
+TIER_A=(python-fastapi go nestjs java-spring java-spring-gradle java-quarkus frontend)
 
-# ── Help ──────────────────────────────────────────────────────────────────────
 usage() {
-  echo ""
-  echo "Usage: $0 <project-name> <stack> [destination]"
-  echo ""
-  echo "Available stacks:"
-  for s in "${STACKS[@]}"; do echo "  - $s"; done
-  echo ""
-  echo "Examples:"
-  echo "  $0 my-api python-fastapi"
-  echo "  $0 my-api python-fastapi /path/to/new-project"
-  echo ""
+  cat <<USAGE
+
+Usage: $0 <project-name> <stack> [destination] [options]
+
+Stacks (★ = ships a walking skeleton that runs and tests itself):
+USAGE
+  local stack marker
+  for stack in "${STACKS[@]}"; do
+    marker="  "
+    for tier_a in "${TIER_A[@]}"; do [[ "$stack" == "$tier_a" ]] && marker=" ★"; done
+    printf '  %s %s\n' "$marker" "$stack"
+  done
+  cat <<USAGE
+
+Options:
+  --scaffold full|structure|none   how much code to generate (default: full)
+  --agent both|claude|opencode     which agents to configure (default: both)
+  --variant react|vue|angular      frontend stack only (default: react)
+  --yes                            never prompt
+  --dry-run                        list the actions, write nothing
+
+Examples:
+  $0 payment-api python-fastapi
+  $0 payment-api go ~/projects/payment-api --yes
+  $0 platform monorepo --scaffold structure --agent opencode
+
+USAGE
   exit 1
 }
 
-# ── Argument validation ───────────────────────────────────────────────────────
+# ── Arguments ────────────────────────────────────────────────────────────────
 [[ $# -lt 2 ]] && usage
 
-PROJECT_NAME="$1"
-STACK="$2"
-DEST="${3:-$(pwd)/$PROJECT_NAME}"
-TEMPLATE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_NAME="$1"; shift
+STACK="$1"; shift
 
-# Validate stack
-VALID_STACK=false
-for s in "${STACKS[@]}"; do [[ "$STACK" == "$s" ]] && VALID_STACK=true && break; done
-[[ "$VALID_STACK" == false ]] && error "Unknown stack '$STACK'. Valid stacks: ${STACKS[*]}"
+DEST=""
+SCAFFOLD_MODE="full"
+AGENT_MODE="both"
+ASSUME_YES=false
+DRY_RUN=false
+export FRONTEND_VARIANT="${FRONTEND_VARIANT:-react}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --scaffold) SCAFFOLD_MODE="${2:?--scaffold needs a value}"; shift 2 ;;
+    --agent)    AGENT_MODE="${2:?--agent needs a value}"; shift 2 ;;
+    --variant)  FRONTEND_VARIANT="${2:?--variant needs a value}"; shift 2 ;;
+    --yes|-y)   ASSUME_YES=true; shift ;;
+    --dry-run)  DRY_RUN=true; shift ;;
+    -h|--help)  usage ;;
+    -*)         error "Unknown option '$1'" ;;
+    *)          if [[ -z "$DEST" ]]; then DEST="$1"; else error "Unexpected argument '$1'"; fi; shift ;;
+  esac
+done
+
+DEST="${DEST:-$(pwd)/$PROJECT_NAME}"
+
+valid_stack=false
+for stack in "${STACKS[@]}"; do [[ "$STACK" == "$stack" ]] && valid_stack=true; done
+$valid_stack || error "Unknown stack '$STACK'. Run '$0 --help' for the list."
+
+case "$SCAFFOLD_MODE" in full|structure|none) ;; *) error "--scaffold must be full, structure or none" ;; esac
+case "$AGENT_MODE"    in both|claude|opencode) ;; *) error "--agent must be both, claude or opencode" ;; esac
 
 PRESET_FILE="$TEMPLATE_DIR/.claude/presets/${STACK}.md"
-[[ ! -f "$PRESET_FILE" ]] && error "Preset not found: $PRESET_FILE"
+[[ -f "$PRESET_FILE" ]] || error "Preset not found: $PRESET_FILE"
 
-# ── Destination ───────────────────────────────────────────────────────────────
-if [[ -d "$DEST" ]]; then
-  warn "Directory '$DEST' already exists."
-  read -p "Continue and overwrite template files? [y/N] " -n 1 -r
-  echo
-  [[ ! $REPLY =~ ^[Yy]$ ]] && error "Cancelled."
+# ── Destination ──────────────────────────────────────────────────────────────
+if [[ -d "$DEST" && -n "$(ls -A "$DEST" 2>/dev/null)" ]] && ! $ASSUME_YES && ! $DRY_RUN; then
+  warn "'$DEST' already exists and is not empty."
+  warn "Existing files are never overwritten; missing ones are added."
+  read -r -p "Continue? [y/N] " -n 1 reply; echo
+  [[ "$reply" =~ ^[Yy]$ ]] || error "Cancelled."
 fi
 
-# ── Copy template ─────────────────────────────────────────────────────────────
-info "Creating $DEST..."
-mkdir -p "$DEST"
-cp -r "$TEMPLATE_DIR/." "$DEST/"
-rm -f "$DEST/init.sh"         # Do not copy this script into the project
+copy() {                      # copy <relative-source> [relative-destination]
+  local src="$TEMPLATE_DIR/$1" dst="$DEST/${2:-$1}"
+  [[ -e "$src" ]] || return 0
+  if [[ -e "$dst" ]]; then echo -e "${DIM}  · kept existing ${2:-$1}${NC}"; return 0; fi
+  $DRY_RUN && { echo -e "${DIM}  · would add ${2:-$1}${NC}"; return 0; }
+  mkdir -p "$(dirname "$dst")"
+  cp -R "$src" "$dst"
+}
 
-# ── Project name substitution ─────────────────────────────────────────────────
-info "Configuring project '$PROJECT_NAME'..."
-if command -v sed &>/dev/null; then
-  sed -i.bak "s/<PROJECT_NAME>/$PROJECT_NAME/g" "$DEST/CLAUDE.md" && rm -f "$DEST/CLAUDE.md.bak"
-  sed -i.bak "s/<PROJECT_NAME>/$PROJECT_NAME/g" "$DEST/docs/adr/README.md" && rm -f "$DEST/docs/adr/README.md.bak"
-fi
-
-# ── Inject preset into CLAUDE.md ──────────────────────────────────────────────
-info "Injecting $STACK preset..."
-PRESET_CONTENT=$(cat "$PRESET_FILE")
-MARKER="### Code conventions"
-if grep -q "$MARKER" "$DEST/CLAUDE.md"; then
-  echo "" >> "$DEST/CLAUDE.md"
-  echo "<!-- Auto-injected preset: $STACK -->" >> "$DEST/CLAUDE.md"
-  echo "$PRESET_CONTENT" >> "$DEST/CLAUDE.md"
-fi
-
-# ── Create .gitignore if absent ───────────────────────────────────────────────
-if [[ ! -f "$DEST/.gitignore" ]]; then
-  info "Creating .gitignore..."
-  cat > "$DEST/.gitignore" <<'GITIGNORE'
-# Secrets & credentials
-.env
-.env.local
-.env.production
-.env.staging
-*.key
-*.pem
-*.p12
-*.pfx
-*.jks
-*.credentials
-id_rsa
-id_rsa.pub
-id_ed25519
-id_ed25519.pub
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Editors
-.idea/
-.vscode/settings.json
-*.swp
-GITIGNORE
-fi
-
-# ── Create docs directories ───────────────────────────────────────────────────
-mkdir -p "$DEST/docs/specs" "$DEST/docs/runbooks"
-
-# ── CI/CD templates ───────────────────────────────────────────────────────────
-if [[ ! -d "$DEST/.github" ]]; then
-  info "Creating GitHub Actions CI pipeline..."
-  mkdir -p "$DEST/.github/workflows"
-  cat > "$DEST/.github/workflows/quality-gate.yml" <<YAML
-name: Quality Gate
-
-on:
-  pull_request:
-    branches: [main, master, develop]
-  push:
-    branches: [main, master]
-
-jobs:
-  quality:
-    name: Tests · Lint · Build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-
-      # Adapt steps below to your stack (see B4 in CLAUDE.md)
-      - name: Install dependencies
-        run: echo "Replace with <install_cmd> from section B4"
-
-      - name: Run tests
-        run: echo "Replace with <test_cmd> from section B4"
-
-      - name: Lint
-        run: echo "Replace with <lint_cmd> from section B4"
-
-      - name: Build
-        run: echo "Replace with <build_cmd> from section B4"
-YAML
-fi
-
-# ── Template version marker ───────────────────────────────────────────────────
-TEMPLATE_VERSION=$(cat "$TEMPLATE_DIR/VERSION" 2>/dev/null || echo "unknown")
-echo "$TEMPLATE_VERSION" > "$DEST/.claude/.template-version"
-
-# ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
-success "Project '$PROJECT_NAME' initialized at $DEST"
+echo -e "${BOLD}Bootstrapping '${PROJECT_NAME}'${NC}"
+echo -e "  stack     : ${STACK}"
+echo -e "  agents    : ${AGENT_MODE}"
+echo -e "  scaffold  : ${SCAFFOLD_MODE}"
+echo -e "  target    : ${DEST}"
+$DRY_RUN && echo -e "  ${YELLOW}dry run — nothing will be written${NC}"
 echo ""
-echo "  Stack    : $STACK"
-echo "  Template : v$TEMPLATE_VERSION"
+
+$DRY_RUN || mkdir -p "$DEST"
+
+# ── Agent configuration ──────────────────────────────────────────────────────
+info "Agent configuration"
+copy "AGENTS.md"
+copy ".claude/skills"
+copy ".claude/agents"
+copy ".claude/hooks"
+copy ".claude/presets/${STACK}.md" ".claude/presets/${STACK}.md"
+copy "scripts/test-hooks.sh"
+copy "docs/DUAL-AGENT.md"
+copy ".mcp.json.example"
+
+if [[ "$AGENT_MODE" == "both" || "$AGENT_MODE" == "claude" ]]; then
+  copy "CLAUDE.md"
+  copy ".claude/settings.json"
+fi
+
+if [[ "$AGENT_MODE" == "both" || "$AGENT_MODE" == "opencode" ]]; then
+  copy "opencode.json"
+  copy ".opencode/agents"
+  copy ".opencode/commands"
+  copy ".opencode/plugins"
+  copy "scripts/sync-opencode.py"
+fi
+
+if [[ "$AGENT_MODE" == "opencode" ]]; then
+  # opencode reads AGENTS.md directly; the Claude import wrapper would be noise.
+  $DRY_RUN || rm -f "$DEST/CLAUDE.md"
+fi
+
+copy ".github/workflows/quality-gate.yml"
+copy ".github/PULL_REQUEST_TEMPLATE.md"
+copy ".gitignore"
+
+# ── Project identity ─────────────────────────────────────────────────────────
+info "Project identity"
+if ! $DRY_RUN; then
+  while IFS= read -r file; do
+    sed -i.bak "s|<PROJECT_NAME>|${PROJECT_NAME}|g" "$file" && rm -f "${file}.bak"
+  done < <(find "$DEST" -maxdepth 2 -name 'AGENTS.md' -o -maxdepth 2 -name 'CLAUDE.md' 2>/dev/null)
+fi
+
+# ── Preset injection into section B3 ─────────────────────────────────────────
+info "Injecting the ${STACK} preset into B3"
+if ! $DRY_RUN; then
+  python3 - "$DEST/AGENTS.md" "$PRESET_FILE" "$STACK" <<'PY'
+import sys, pathlib
+agents, preset, stack = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3]
+text = agents.read_text(encoding="utf-8")
+if f"Auto-injected preset: {stack}" in text:
+    sys.exit(0)
+body = preset.read_text(encoding="utf-8")
+# Drop the preset's own title and copy-paste instruction: it lands in B3 itself.
+lines = [line for line in body.splitlines() if not line.startswith("# Preset B3")]
+while lines and (lines[0].startswith(">") or not lines[0].strip() or lines[0].strip() == "---"):
+    lines.pop(0)
+block = f"\n<!-- Auto-injected preset: {stack} -->\n\n" + "\n".join(lines).rstrip() + "\n"
+marker = "### Code conventions"
+index = text.find(marker)
+if index == -1:
+    agents.write_text(text.rstrip() + "\n" + block, encoding="utf-8")
+else:
+    agents.write_text(text[:index] + block.lstrip("\n") + "\n" + text[index + len(marker):].lstrip("\n"), encoding="utf-8")
+PY
+fi
+
+# ── Skeleton ─────────────────────────────────────────────────────────────────
+DRY_FLAG=""
+$DRY_RUN && DRY_FLAG="--dry-run"
+"$TEMPLATE_DIR/scripts/scaffold.sh" "$DEST" "$PROJECT_NAME" "$STACK" "$SCAFFOLD_MODE" $DRY_FLAG
+
+# ── Repository ───────────────────────────────────────────────────────────────
+if ! $DRY_RUN; then
+  if ! git -C "$DEST" rev-parse --git-dir >/dev/null 2>&1; then
+    info "Initialising the git repository"
+    git -C "$DEST" init -q
+  fi
+  cat "$TEMPLATE_DIR/VERSION" 2>/dev/null > "$DEST/.claude/.template-version" || echo unknown > "$DEST/.claude/.template-version"
+  chmod +x "$DEST"/.claude/hooks/*.sh 2>/dev/null || true
+  chmod +x "$DEST"/scripts/*.sh 2>/dev/null || true
+fi
+
+# ── Summary ──────────────────────────────────────────────────────────────────
 echo ""
-echo -e "${YELLOW}Next steps:${NC}"
+success "Ready — ${DEST}"
+echo ""
+echo -e "${BOLD}Next steps${NC}"
 echo "  1. cd $DEST"
-echo "  2. Complete sections B1–B8 in CLAUDE.md"
-echo "     (replace all <angle bracket> values)"
-echo "  3. Uncomment the permissions matching your stack in .claude/settings.json"
-echo "  4. Adapt .github/workflows/quality-gate.yml with the B4 commands"
-echo "  5. Create your first ADR: /adr [initial architectural decision]"
+echo "  2. make install && make check          # the gate should already be green"
+echo "  3. Complete sections B1–B8 in AGENTS.md (replace every <angle bracket>)"
+echo "  4. Open an agent session and run /prime"
+echo ""
+if [[ "$AGENT_MODE" == "both" ]]; then
+  echo -e "  ${DIM}Claude Code reads CLAUDE.md (which imports AGENTS.md); opencode reads"
+  echo -e "  AGENTS.md directly. Both share .claude/skills/. See docs/DUAL-AGENT.md.${NC}"
+fi
 echo ""
