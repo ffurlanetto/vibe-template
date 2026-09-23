@@ -7,77 +7,102 @@ on:
     branches: [main, master]
 
 # ── GITHUB ACTIONS SECURITY ──────────────────────────────────────────────────
-# CORE RULE: never interpolate ${{ github.event.* }} directly inside a `run:`
-# block — command injection risk if an attacker controls a PR title, commit
-# message, or event payload.
+# Never interpolate ${{ github.event.* }} directly inside a `run:` block: a PR
+# title or a commit message an attacker controls becomes shell input.
 #
-# ✅ SAFE PATTERN — pass through an environment variable:
-#   env:
+# ✅ pass it through the environment       ❌ interpolate it into the script
+#   env:                                     run: echo "${{ github.event.pull_request.title }}"
 #     PR_TITLE: ${{ github.event.pull_request.title }}
 #   run: echo "$PR_TITLE"
 #
-# ❌ UNSAFE PATTERN — direct interpolation inside run:
-#   run: echo "${{ github.event.pull_request.title }}"
-#
-# High-risk inputs: issue.title/body, pull_request.title/body,
-# comment.body, head_commit.message, head_ref, client_payload.*
-#
-# Reference: https://github.blog/security/vulnerability-research/how-to-catch-github-actions-workflow-injections-before-attackers-do/
+# High-risk inputs: issue.title/body, pull_request.title/body, comment.body,
+# head_commit.message, head_ref, client_payload.*
 # ──────────────────────────────────────────────────────────────────────────────
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   quality:
-    name: Tests · Lint · Build
+    name: make check
     runs-on: ubuntu-latest
-
-    # Minimal permissions — principle of least privilege
-    permissions:
-      contents: read
-
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      # ── Adapt the steps below to your stack (see B4 in CLAUDE.md) ──
+      # ── Install the toolchain for your stack (see AGENTS.md B2) ──
+      # Uncomment the block that matches; pin every action outside actions/ by SHA (A13).
+      #
+      # - uses: actions/setup-python@v5
+      #   with: { python-version: '3.12' }
+      # - uses: astral-sh/setup-uv@v4
+      #
+      # - uses: actions/setup-node@v4
+      #   with: { node-version: '22', cache: 'npm' }
+      #
+      # - uses: actions/setup-go@v5
+      #   with: { go-version: '1.23', cache: true }
+      #
+      # - uses: actions/setup-java@v4
+      #   with: { distribution: 'temurin', java-version: '21', cache: 'maven' }
+      #
+      # - uses: actions/setup-dotnet@v4
+      #   with: { dotnet-version: '8.0.x' }
 
       - name: Install dependencies
-        run: echo "Remplacer par <install_cmd> de la section B4"
-        # Exemples :
-        #   mvn install -DskipTests
-        #   dotnet restore
-        #   uv sync
-        #   go mod download
-        #   npm install
+        run: make install
 
-      - name: Run tests
-        run: echo "Remplacer par <test_cmd> de la section B4"
-        # Exemples :
-        #   mvn test
-        #   dotnet test --collect:"XPlat Code Coverage"
-        #   pytest --cov=src --cov-report=term-missing
-        #   go test ./... -race -count=1
-        #   npm run test
+      # One target, every stack: the Makefile holds the stack-specific commands
+      # (AGENTS.md B4), so this pipeline never needs to know the language.
+      - name: Quality gate
+        run: make check
 
-      - name: Lint
-        run: echo "Remplacer par <lint_cmd> de la section B4"
-        # Exemples :
-        #   mvn checkstyle:check spotbugs:check
-        #   dotnet build --configuration Release /p:TreatWarningsAsErrors=true
-        #   ruff check . && ruff format --check .
-        #   golangci-lint run ./...
-        #   npm run lint
+  guardrails:
+    name: Security guardrails
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so the secret scan sees more than the tip commit.
+          fetch-depth: 0
 
-      - name: Type check
-        run: echo "Remplacer par <typecheck_cmd> de la section B4 — supprimer si non applicable"
-        # Exemples :
-        #   mypy src/
-        #   npx tsc --noEmit
-        # Go and Java have no separate step (included in build/lint)
+      - name: Hook self-test
+        run: make test-hooks
 
-      - name: Build
-        run: echo "Remplacer par <build_cmd> de la section B4"
-        # Exemples :
-        #   mvn package -DskipTests
-        #   dotnet build --configuration Release
-        #   python -m build
-        #   go build ./...
-        #   npm run build
+      - name: Generated agent artifacts are up to date
+        run: make check-sync
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependencies:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same toolchain block as the quality job — uncomment what your stack needs.
+
+      - name: Install dependencies
+        run: make install
+
+      # Stack-native audit (AGENTS.md A13). It works on any repository, unlike
+      # the GitHub action below, which hard-fails where Dependency graph is off.
+      - name: Audit
+        run: make audit
+
+      # Optional extra: GitHub's dependency review on pull requests. It needs
+      # Dependency graph enabled on the repository (Settings → Code security),
+      # and fails the job outright when it is not — so it is opt-in.
+      # - uses: actions/dependency-review-action@v4
+      #   if: github.event_name == 'pull_request'
+      #   with:
+      #     fail-on-severity: high

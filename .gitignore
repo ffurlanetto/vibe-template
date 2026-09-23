@@ -1,0 +1,38 @@
+# ── Secrets & credentials ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.credentials
+id_rsa*
+id_ed25519*
+
+# ── Claude Code / opencode local state ───────────────────────────────────────
+.claude/settings.local.json
+.claude/.template-version
+.opencode/node_modules/
+.opencode/package.json
+.opencode/bun.lock*
+opencode.local.json
+CLAUDE.local.md
+AGENTS.local.md
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Editors ──────────────────────────────────────────────────────────────────
+.idea/
+.vscode/settings.json
+*.swp
+
+# ── Scaffolding scratch ──────────────────────────────────────────────────────
+/tmp-scaffold/
+
+# ── Python bytecode ──────────────────────────────────────────────────────────
+__pycache__/
+*.pyc

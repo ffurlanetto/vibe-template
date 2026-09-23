@@ -1,189 +1,129 @@
-# Claude Code Template — Usage Guide v2.0
+# Using the template day to day
 
-## Template structure
-
-```
-template/
-├── README.md                          # Project overview and quick start
-├── CLAUDE.md                          # Main configuration (Part A + B)
-├── SETUP.md                           # Detailed usage guide (this file)
-├── INSTALL-DEV.md                     # Installation guide for developers
-├── INSTALL-AGENT.md                   # Installation guide for LLM agents
-├── VERSION                            # Template version
-├── init.sh                            # Automated bootstrap script
-├── docs/
-│   ├── adr/
-│   │   └── README.md                  # ADR index (keep empty at start)
-│   └── specs/
-│       └── SPEC-TEMPLATE.md           # Functional specification template
-├── .github/
-│   └── workflows/
-│       └── quality-gate.yml           # Base CI pipeline (to adapt)
-└── .claude/
-    ├── settings.json                  # Permissions and hooks (to adapt)
-    ├── commands/
-    │   ├── plan.md                    # /plan
-    │   ├── adr.md                     # /adr
-    │   ├── review.md                  # /review
-    │   ├── security-audit.md          # /security-audit
-    │   └── debug.md                   # /debug
-    └── presets/
-        ├── java-spring.md             # Java / Spring Boot
-        ├── java-spring-gradle.md      # Java / Spring Boot / Gradle
-        ├── java-quarkus.md            # Java / Quarkus / Gradle
-        ├── dotnet-aspnet.md           # .NET / ASP.NET Core
-        ├── python-fastapi.md          # Python / FastAPI
-        ├── go.md                      # Go
-        ├── nestjs.md                  # Node.js / NestJS
-        ├── rust.md                    # Rust
-        ├── rails.md                   # Ruby on Rails
-        ├── react-native.md            # React Native (Expo / CLI)
-        ├── flutter.md                 # Flutter / Dart
-        ├── monorepo.md                # Monorepo (Nx / Turborepo)
-        ├── frontend.md               # Vue 3 / Angular / React
-        └── sre.md                    # SRE / Infrastructure as Code
-```
+Assumes you have already run `init.sh`. If not, see [`INSTALL-DEV.md`](INSTALL-DEV.md).
 
 ---
 
-## Bootstrap a new project (2 minutes)
+## 1. Fill in Part B — once, properly
 
-### Option A — Automated script (recommended)
+`AGENTS.md` is split in two. Part A is the shared kernel: leave it alone. Part B
+is yours, and it is the difference between an agent that guesses and one that knows.
+
+Replace every `<angle bracket>`:
+
+| Section | What matters most |
+|---------|-------------------|
+| B1 identity | the ticket prefix, so `TODO(PROJ-123)` is checkable |
+| B2 stack | exact versions — an agent writing for the wrong major wastes a day |
+| B3 conventions | already filled from the preset; adjust to your house style |
+| B4 commands | already wired to the `Makefile`; change the recipes, not the target names |
+| B5 architecture | the module table: who is allowed to depend on whom |
+| B6 constraints | SLAs, compliance, performance budgets, LLM budgets |
+| B7 integrations | every external system, with its protocol |
+| B8 workflow | branches, review rules, who can deploy |
+
+An unfilled Part B is the single most common reason an agent produces plausible,
+wrong code.
+
+---
+
+## 2. The loop
+
+```
+/prime                    load the project context into a fresh session
+/plan <request>           get a plan — read it, then reply "ok"
+                          implementation follows the plan step by step
+/review                   quality, security and performance grids
+/commit                   conventional commit, behind the quality gate
+/pr                       a description a reviewer can act on
+```
+
+Other skills when the situation calls for them: `/spec` before a user-facing
+feature, `/adr` before an architectural decision, `/tdd` to drive a change
+test-first, `/debug` when something is broken, `/security-audit`, `/deps-audit`
+and `/perf-audit` before shipping.
+
+---
+
+## 3. Delegate to a subagent
+
+Subagents work in their own context, so a wide search or a long audit does not
+crowd the conversation you are actually having.
+
+| Agent | Use it for | Can it write? |
+|-------|-----------|---------------|
+| `architect` | challenging a design *before* it is built | no |
+| `code-reviewer` | reviewing a finished diff | no |
+| `security-auditor` | vulnerabilities and exploit paths | no |
+| `test-engineer` | filling coverage gaps, regression tests | yes |
+| `debugger` | root-causing a failure, minimal fix | yes |
+| `docs-writer` | READMEs, ADRs, runbooks, doc comments | yes |
+
+In Claude Code, ask for one by name. In opencode, mention it: `@architect`.
+
+---
+
+## 4. The guardrails
+
+Two checks run outside the model, so a persuasive prompt cannot disable them:
+
+- writing a file that looks like it holds a secret produces a warning naming the
+  line, with the value masked;
+- committing a staged diff that contains one is **blocked**.
 
 ```bash
-# From the template root directory:
-./init.sh <project-name> <stack> [destination]
-
-# Examples:
-./init.sh my-api python-fastapi
-./init.sh backend-service go /workspace/my-project
-./init.sh frontend-app frontend ~/projects/frontend-app
+make test-hooks     # 10 assertions, both invocation modes
 ```
 
-**Available stacks:** `java-spring` · `java-spring-gradle` · `java-quarkus` · `dotnet-aspnet` · `python-fastapi` · `go` · `nestjs` · `rust` · `rails` · `react-native` · `flutter` · `monorepo` · `frontend` · `sre`
-
-The script automatically creates:
-- The full directory structure
-- A `.gitignore` covering common secrets
-- The CI pipeline `.github/workflows/quality-gate.yml`
-- The version marker `.claude/.template-version`
-
-**After the script:** complete sections B1–B8 in `CLAUDE.md` and adapt `quality-gate.yml`.
+If a guardrail fires on a false positive, fix the pattern in
+`.claude/hooks/lib.sh` — do not disable the hook, and never reach for
+`git commit --no-verify`.
 
 ---
 
-### Option B — Manual bootstrap (for full control)
+## 5. Keeping the two agents in sync
 
-#### Step 1 — Copy the template
+Anything under `.claude/` is a source; parts of `.opencode/` and `opencode.json`
+are generated from it.
 
 ```bash
-cp -r template/ /path/to/new-project/
-cd /path/to/new-project
+make sync         # after changing an agent, a permission, or a hook
+make check-sync   # what CI runs
 ```
 
-#### Step 2 — Fill in Part B of CLAUDE.md
+Read [`docs/DUAL-AGENT.md`](docs/DUAL-AGENT.md) once — it lists the four traps
+that cost the most time.
 
-Open `CLAUDE.md` and complete all sections `B1` to `B8`:
-- Replace all `<angle bracket>` values with real values
-- Remove inapplicable lines
+---
 
-**Using presets:**
-```bash
-# Example for a Python/FastAPI project:
-cat .claude/presets/python-fastapi.md
-# → Copy the content into section B3 of CLAUDE.md
-```
-
-#### Step 3 — Adapt settings.json
-
-In `.claude/settings.json`, uncomment the `allow` blocks matching your stack:
-
-```json
-// Uncomment for a Python project:
-"Bash(pytest*)",
-"Bash(ruff check*)",
-"Bash(mypy*)",
-// etc.
-```
-
-#### Step 4 — Verify
+## 6. MCP servers
 
 ```bash
-claude
-# Inside the session:
-/plan Create a GET /health endpoint that returns the application status
-# → Should generate a structured plan and wait for your approval
+cp .mcp.json.example .mcp.json
 ```
 
----
-
-## Daily workflow
-
-```
-Write the request
-        ↓
-Claude reads CLAUDE.md (Part A + B)
-        ↓
-/plan → structured plan submitted for approval
-        ↓
-You reply: "ok" / "proceed" / "approved"
-        ↓
-Step-by-step implementation
-        ↓
-/review → quality + security report
-        ↓
-Commit if review PASS
-```
-
-**For bugs:** use `/debug` rather than a free-form description — the structured workflow is significantly more effective.
+Declare the server for opencode too, under `mcp` in `opencode.json`. Review what
+you enable: an MCP server is remote code running with your agent's permissions,
+and its output is data, never instructions (A5, A11).
 
 ---
 
-## Available commands
+## 7. Context hygiene
 
-| Command | Usage |
-|---------|-------|
-| `/plan [request]` | Generate a plan before any development |
-| `/adr [decision]` | Document an architectural decision |
-| `/review` | Quality + security review of the session's code |
-| `/security-audit [scope]` | Targeted security audit |
-| `/debug [problem]` | Systematic debugging: reproduce → isolate → fix |
+- One session, one task. Start a new one rather than pivoting subject.
+- Compact after the plan is approved, and again past ~15 exchanges.
+- After a reset: "Working on `<feature>`, plan approved, current state: `<X>`".
+- Push wide searches into a subagent; keep the main context for decisions.
 
 ---
 
-## Built-in security hooks
-
-`settings.json` includes two active hooks from day one:
-
-| Hook | Trigger | Behavior |
-|------|---------|----------|
-| **PostToolUse** | After each `Edit` / `Write` | Scans the modified file for hardcoded secrets — warning if detected |
-| **PreToolUse** | Before `git commit` | Scans staged files — **blocks the commit** if a secret is detected |
-
-These hooks work without additional configuration. They require Python 3 (available on any modern development environment).
-
----
-
-## Template maintenance principles
-
-- **Part A**: never modify per project — update only in the template source and increment `VERSION`
-- **Part B**: project-specific — document all local conventions here
-- **Presets**: enrich over time — every reusable new pattern deserves a preset
-- **ADR**: create at least one ADR for the initial structural decisions of the project
-- **VERSION**: track the template version in each project via `.claude/.template-version`
-
----
-
-## Updating the template in an existing project
+## 8. Upgrading the template
 
 ```bash
-# Check the version used in the project
-cat .claude/.template-version
-
-# See the current version of the template source
-cat /path/to/template/VERSION
-
-# Update Part A only (common kernel)
-# Do NOT overwrite Part B — it is project-specific
-diff /path/to/template/CLAUDE.md CLAUDE.md
+cat .claude/.template-version         # what this project was generated from
+/path/to/template/init.sh <name> <stack> . --scaffold none --yes
 ```
+
+Existing files are never overwritten, so you only receive what is new. Diff
+`AGENTS.md` Part A against the template's to pick up kernel changes, and read
+[`CHANGELOG.md`](CHANGELOG.md) for breaking ones.

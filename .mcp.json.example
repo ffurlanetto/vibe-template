@@ -1,0 +1,20 @@
+{
+  "_comment": "Copy to .mcp.json and keep it out of git if it carries anything sensitive. An MCP server is remote code running with your agent's permissions: review it before enabling (AGENTS.md A5, A11). Never put a token literal here — reference an environment variable.",
+  "mcpServers": {
+    "example-http": {
+      "type": "http",
+      "url": "https://mcp.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${EXAMPLE_MCP_TOKEN}"
+      }
+    },
+    "example-local": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@example/mcp-server@1.2.3"],
+      "env": {
+        "EXAMPLE_API_KEY": "${EXAMPLE_API_KEY}"
+      }
+    }
+  }
+}

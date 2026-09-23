@@ -1,0 +1,68 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "bash": {
+      "*": "ask",
+      "make install": "allow",
+      "make test*": "allow",
+      "make lint": "allow",
+      "make typecheck": "allow",
+      "make build": "allow",
+      "make audit": "allow",
+      "make check": "allow",
+      "make sync": "allow",
+      "make check-sync": "allow",
+      "make test-hooks": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "git branch*": "allow",
+      "git add*": "allow",
+      "git stash*": "allow",
+      "git fetch*": "allow",
+      "git push*": "ask",
+      "git reset --hard*": "ask",
+      "git rebase*": "ask",
+      "git checkout*": "ask",
+      "make dev": "ask",
+      "rm -rf /*": "deny",
+      "rm -rf ~*": "deny",
+      "git commit --no-verify*": "deny",
+      "git push --force*": "deny",
+      "curl * | bash*": "deny",
+      "curl * | sh*": "deny",
+      "wget * | bash*": "deny",
+      "wget * | sh*": "deny"
+    },
+    "edit": "ask",
+    "glob": {
+      "*": "allow",
+      "**": "allow"
+    },
+    "grep": {
+      "*": "allow",
+      "**": "allow"
+    },
+    "read": {
+      "*": "allow",
+      "**": "allow",
+      "**/.env": "deny",
+      "**/.env.*": "deny",
+      "**/secrets*": "deny",
+      "**/*.key": "deny",
+      "**/*.pem": "deny",
+      "**/*.p12": "deny",
+      "**/*.pfx": "deny",
+      "**/*.jks": "deny",
+      "**/id_rsa*": "deny",
+      "**/id_ed25519*": "deny",
+      "**/*.credentials": "deny",
+      "**/appsettings.Production.json": "deny",
+      "**/application-prod.properties": "deny",
+      "**/application-prod.yml": "deny"
+    },
+    "skill": "allow",
+    "webfetch": "ask"
+  }
+}

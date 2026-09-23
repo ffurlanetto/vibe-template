@@ -1,0 +1,59 @@
+# ── Secrets & credentials (AGENTS.md A5) ─────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.credentials
+id_rsa*
+id_ed25519*
+
+# ── Dependencies & virtual environments ──────────────────────────────────────
+node_modules/
+.venv/
+venv/
+vendor/
+.bundle/
+
+# ── Build output ─────────────────────────────────────────────────────────────
+dist/
+build/
+out/
+bin/
+target/
+*.egg-info/
+.next/
+.nuxt/
+
+# ── Caches & coverage ────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.gradle/
+coverage/
+.coverage
+htmlcov/
+*.tsbuildinfo
+
+# ── Agent local state ────────────────────────────────────────────────────────
+.claude/settings.local.json
+.claude/.template-version
+.opencode/node_modules/
+.opencode/package.json
+.opencode/bun.lock*
+opencode.local.json
+CLAUDE.local.md
+AGENTS.local.md
+.mcp.json
+
+# ── OS & editors ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json
+*.swp
