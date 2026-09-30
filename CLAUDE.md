@@ -30,8 +30,11 @@ Three hooks run regardless of what the model decides:
   **denies** a commit that changes source without changing a test, unless it carries
   a `Test-Exempt:` trailer with a reason (ADR-002).
 
-Both read their JSON payload on **stdin** and are the same scripts the opencode
+They read their JSON payload on **stdin** and are the same scripts the opencode
 plugin calls. Test them with `make test-hooks`.
+
+A fourth hook observes rather than guards: `SubagentStart` and `SubagentStop`
+append to `.claude/run/ledger.jsonl`, which `make agents` renders.
 
 ## Subagents
 

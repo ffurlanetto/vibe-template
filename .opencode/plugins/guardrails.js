@@ -7,12 +7,22 @@
  *   .claude/hooks/block-commit-secrets.sh  → blocks a commit carrying a secret
  *   .claude/hooks/require-tests.sh         → blocks a commit that skips its tests
  *   .claude/hooks/scan-secrets.sh          → warns after writing a likely secret
+ *   .claude/hooks/ledger.sh                → records subagent starts and stops
  *
  * Script exit contract:  0 = clean · 0 + stderr = warning · 2 = block
+ *
+ * Claude Code has SubagentStart/SubagentStop hooks; opencode does not, so the
+ * equivalent events are emitted around the `task` tool. The contract both sides
+ * honour is the ledger file, not either event API (ADR-003).
  */
 
 const WRITE_TOOLS = new Set(["write", "edit", "apply_patch", "patch"])
 const COMMIT_RE = /\bgit\b[^\n]*\bcommit\b/
+
+function agentTypeOf(args) {
+  if (!args || typeof args !== "object") return "task"
+  return args.subagent_type || args.agent || args.agentType || "task"
+}
 
 function filePathOf(args) {
   if (!args || typeof args !== "object") return ""
@@ -33,6 +43,11 @@ export const Guardrails = async ({ $, directory, worktree, client }) => {
 
   return {
     "tool.execute.before": async (input, output) => {
+      if (input.tool === "task") {
+        await $`${hook("ledger.sh")} agent.start ${agentTypeOf(output?.args)} ${input.callID}`
+          .cwd(root).nothrow().quiet()
+        return
+      }
       if (input.tool !== "bash") return
       const command = output?.args?.command
       if (typeof command !== "string" || !COMMIT_RE.test(command)) return
@@ -55,7 +70,13 @@ export const Guardrails = async ({ $, directory, worktree, client }) => {
       }
     },
 
-    "tool.execute.after": async (input) => {
+    "tool.execute.after": async (input, output) => {
+      if (input.tool === "task") {
+        const summary = typeof output?.output === "string" ? output.output : ""
+        await $`${hook("ledger.sh")} agent.stop ${agentTypeOf(input.args)} ${input.callID} ${summary}`
+          .cwd(root).nothrow().quiet()
+        return
+      }
       if (!WRITE_TOOLS.has(input.tool)) return
       const file = filePathOf(input.args)
       if (!file) return

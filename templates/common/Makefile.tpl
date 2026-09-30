@@ -51,6 +51,10 @@ sync: ## Regenerate the opencode artifacts from the Claude Code sources
 check-sync: ## Fail if the generated opencode artifacts are out of date
 	@if [ -f scripts/sync-opencode.py ]; then python3 scripts/sync-opencode.py --check; else echo "sync not installed"; fi
 
+.PHONY: agents
+agents: ## Show what the subagents have been doing (reads .claude/run/ledger.jsonl)
+	@if [ -f scripts/show-ledger.sh ]; then ./scripts/show-ledger.sh; else echo "ledger reader not installed"; fi
+
 .PHONY: test-hooks
 test-hooks: ## Prove the security guardrails actually fire
 	@if [ -f scripts/test-hooks.sh ]; then ./scripts/test-hooks.sh; else echo "hook tests not installed"; fi

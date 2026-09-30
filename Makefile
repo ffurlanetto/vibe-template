@@ -29,6 +29,10 @@ check-sync: ## Fail if the generated opencode artifacts are out of date
 test-hooks: ## Prove the security guardrails actually fire
 	@./scripts/test-hooks.sh
 
+.PHONY: agents
+agents: ## Show what the subagents have been doing (reads the ledger)
+	@./scripts/show-ledger.sh
+
 .PHONY: validate
 validate: ## Validate JSON files, skill and agent frontmatter
 	@./scripts/validate-template.sh

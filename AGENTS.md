@@ -190,6 +190,11 @@ and opencode. Invoke with `/<name>`; an agent may also select one on its own.
 
 **Health checks**: `GET /health/live` (process alive) · `GET /health/ready` (dependencies reachable) · return `503` if a critical dependency is unavailable
 
+**Agent telemetry**: every subagent start and stop is appended to
+`.claude/run/ledger.jsonl` by a hook, with a secret-masked one-line summary.
+`make agents` renders it. The protocol is the file, so both agents feed the same
+ledger — see `docs/DUAL-AGENT.md` and ADR-003.
+
 **Rules**: no trace-id in public API responses · error spans include message + type, not full stack trace · no PII in metric labels
 
 ---
@@ -243,6 +248,9 @@ Performance anti-patterns checklist: see the `perf-audit` skill.
 - `.claude/skills/` is read by both tools — write skills there, nowhere else.
 - `.opencode/agents/`, `.opencode/commands/` and the `permission` block of
   `opencode.json` are **generated**. Never edit them by hand — run `make sync`.
+- Subagent progress is observable: `make agents` reads `.claude/run/ledger.jsonl`,
+  which both runtimes append to. Never ask an agent to report its own progress —
+  an instruction is followed most of the time, and most of the time is not a protocol.
 - See `docs/DUAL-AGENT.md` for the full compatibility matrix.
 
 ---
@@ -343,6 +351,7 @@ make dev          # run locally
 make audit        # dependency / CVE audit
 make check        # test + lint + typecheck + build — the quality gate
 make sync         # regenerate the .opencode/ artifacts
+make agents       # what the subagents have been doing (A8)
 ```
 
 The stack-specific implementation lives in the generated `Makefile`.

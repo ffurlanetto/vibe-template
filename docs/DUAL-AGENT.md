@@ -14,6 +14,7 @@ The rule behind every choice below: *one source per concept, everything else gen
 | Slash commands | the skills above | `.opencode/commands/*.md` | generated wrappers that include the shared skill |
 | Subagents | `.claude/agents/*.md` | `.opencode/agents/*.md` | generated: frontmatter translated, prompt body copied |
 | Guardrails | hooks in `.claude/settings.json` | plugin `.opencode/plugins/guardrails.js` | both call the same `.claude/hooks/*.sh` |
+| Agent progress | `SubagentStart` / `SubagentStop` hooks | plugin events around the `task` tool | both append to the same ledger file |
 | Permissions | `.claude/settings.json` | `opencode.json` → `permission` | generated from the Claude rules |
 | MCP servers | `.mcp.json` | `opencode.json` → `mcp` | mirrored by hand — declare the server in both |
 
@@ -67,6 +68,36 @@ to overwrite it — pin it in `opencode.json` instead.
 
 **Both tools can disable the compatibility.** `OPENCODE_DISABLE_CLAUDE_CODE=1`
 makes opencode ignore `.claude/` entirely, including the shared skills.
+
+---
+
+## The agent ledger
+
+Subagent activity is recorded in **`.claude/run/ledger.jsonl`** — append-only, one
+JSON object per line, gitignored. The contract is the *file*, not either tool's
+event API, which is why both runtimes can feed it and why a third one would only
+have to append lines (ADR-003).
+
+```json
+{"ts":"2026-09-30T11:24:18+0000","event":"agent.start","session_id":"…","agent_type":"code-reviewer","agent_id":"…","summary":""}
+{"ts":"2026-09-30T11:24:41+0000","event":"agent.stop","session_id":"…","agent_type":"code-reviewer","agent_id":"…","summary":"Found 2 issues in the diff…"}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `event` | `agent.start` or `agent.stop` |
+| `agent_id` | pairs a stop with its start; the run duration comes from the two `ts` |
+| `summary` | the agent's final message, one line, 240 characters, **secret-masked** |
+
+```bash
+make agents        # render it as a table: agent, status, duration, summary
+tail -f .claude/run/ledger.jsonl
+```
+
+Two things to know. Claude Code fires on the subagent lifecycle while opencode
+fires around the `task` tool, so timings are close but not identical. And there is
+no rotation: the file grows, `make agents` shows the last 50 events, and truncating
+it is a manual `: > .claude/run/ledger.jsonl`.
 
 ---
 

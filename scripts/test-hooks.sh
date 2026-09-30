@@ -146,5 +146,69 @@ printf 'pub fn g() -> i32 { 2 }\n' > "$GATE/src/plain.rs"
 git -C "$GATE" add src/plain.rs
 check "still blocks source with no inline test" 2 "$(gate 'git commit -m "feat: g"')"
 
+printf '\n\033[0;36mledger.sh\033[0m\n'
+
+LEDGER="$TMP/ledger.jsonl"
+ledger() { CLAUDE_LEDGER_FILE="$LEDGER" "$HOOKS/ledger.sh" "$@"; }
+
+printf '{"hook_event_name":"SubagentStart","session_id":"s1","agent_type":"code-reviewer","agent_id":"a1"}' \
+  | CLAUDE_LEDGER_FILE="$LEDGER" "$HOOKS/ledger.sh"
+[ -s "$LEDGER" ] && ok "records a subagent start" || ko "records a subagent start" "nothing written"
+
+printf '{"hook_event_name":"SubagentStop","session_id":"s1","agent_type":"code-reviewer","agent_id":"a1","last_assistant_message":"Reviewed. token = \\"ghp_abcdefghijklmnopqrstuvwxyz0123\\" was hardcoded."}' \
+  | CLAUDE_LEDGER_FILE="$LEDGER" "$HOOKS/ledger.sh"
+
+if grep -q "ghp_abcdefghijklmnopqrstuvwxyz0123" "$LEDGER"; then
+  ko "masks a secret before persisting it" "the token reached the ledger"
+else
+  ok "masks a secret before persisting it"
+fi
+
+if python3 -c "
+import json, sys
+lines = [json.loads(l) for l in open(sys.argv[1], encoding='utf-8') if l.strip()]
+assert len(lines) == 2, lines
+assert lines[0]['event'] == 'agent.start' and lines[1]['event'] == 'agent.stop'
+assert all(set(l) >= {'ts','event','session_id','agent_type','agent_id','summary'} for l in lines)
+" "$LEDGER" 2>/dev/null; then
+  ok "every line is valid JSON with the agreed fields"
+else
+  ko "every line is valid JSON with the agreed fields" "schema mismatch"
+fi
+
+ledger agent.start test-engineer opencode-call-1 >/dev/null 2>&1
+ledger agent.stop test-engineer opencode-call-1 "Added 4 tests" >/dev/null 2>&1
+if python3 -c "
+import json, sys
+lines = [json.loads(l) for l in open(sys.argv[1], encoding='utf-8') if l.strip()]
+assert lines[-1]['agent_id'] == 'opencode-call-1' and lines[-1]['summary'] == 'Added 4 tests'
+" "$LEDGER" 2>/dev/null; then
+  ok "accepts the argv form the opencode plugin uses"
+else
+  ko "accepts the argv form the opencode plugin uses" "fields not recorded"
+fi
+
+LONG="$(head -c 600 /dev/zero | tr '\0' 'x')"
+ledger agent.stop docs-writer a2 "$LONG" >/dev/null 2>&1
+if python3 -c "
+import json, sys
+last = [json.loads(l) for l in open(sys.argv[1], encoding='utf-8') if l.strip()][-1]
+assert len(last['summary']) <= 240, len(last['summary'])
+" "$LEDGER" 2>/dev/null; then
+  ok "bounds the summary at 240 characters"
+else
+  ko "bounds the summary at 240 characters" "summary not truncated"
+fi
+
+printf 'not json' | CLAUDE_LEDGER_FILE="$LEDGER" "$HOOKS/ledger.sh"
+check "never fails on a malformed payload" 0 "$?"
+
+printf '{"hook_event_name":"PreToolUse","session_id":"s1"}' | CLAUDE_LEDGER_FILE="$LEDGER" "$HOOKS/ledger.sh"
+if [ "$(wc -l < "$LEDGER")" = "5" ]; then
+  ok "ignores events that are not subagent lifecycle"
+else
+  ko "ignores events that are not subagent lifecycle" "extra line written"
+fi
+
 printf '\n%s passed, %s failed\n\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

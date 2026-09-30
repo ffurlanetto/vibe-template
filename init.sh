@@ -130,6 +130,7 @@ copy ".claude/agents"
 copy ".claude/hooks"
 copy ".claude/presets/${STACK}.md" ".claude/presets/${STACK}.md"
 copy "scripts/test-hooks.sh"
+copy "scripts/show-ledger.sh"
 copy "docs/DUAL-AGENT.md"
 copy ".mcp.json.example"
 
