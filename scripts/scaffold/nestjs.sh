@@ -7,6 +7,9 @@ STACK_REQUIRES="npm"
 STACK_DIRS="src/health src/example src/common/config test"
 # npm 10.9.x can fail on the Nest CLI's vitest peer set (arborist #loadPeerSet);
 # the legacy resolver is the documented escape hatch, not a silent default.
+# Test gate boundary (ADR-002): what counts as source, what counts as a test.
+TEST_SOURCES="src/**"
+TEST_PATTERNS="test/** **/*.spec.ts **/*.e2e-spec.ts"
 CMD_INSTALL="npm ci || npm install || npm install --legacy-peer-deps"
 CMD_TEST="npm run test
 npm run test:e2e"

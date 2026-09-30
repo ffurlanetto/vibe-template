@@ -107,11 +107,29 @@ stack_overlay()  { copy_tree_if_absent "$SKELETON" "$DEST"; }   # layer 3
 
 # The Makefile generator reads the command contract from the environment.
 export STACK CMD_INSTALL CMD_TEST CMD_LINT CMD_TYPECHECK CMD_BUILD CMD_DEV CMD_AUDIT
+export TEST_SOURCES TEST_PATTERNS
 
 echo ""
 info "Scaffolding ${STACK} (${STACK_LABEL}) — tier ${STACK_TIER}, mode ${MODE}"
 
-[[ "$MODE" == "none" ]] && { success "Scaffolding skipped (--scaffold none)"; exit 0; }
+# The test gate needs to know this stack's source/test boundary (ADR-002).
+if [[ ! -e "$DEST/.claude/test-policy.json" ]]; then
+  if $DRY_RUN; then
+    skip "would create .claude/test-policy.json"
+  else
+    mkdir -p "$DEST/.claude"
+    python3 "$TEMPLATE_DIR/scripts/write-test-policy.py" \
+      "$TEMPLATE_DIR/templates/common/.claude/test-policy.json" \
+      "$DEST/.claude/test-policy.json"
+  fi
+else
+  skip "kept existing .claude/test-policy.json"
+fi
+
+if [[ "$MODE" == "none" ]]; then
+  success "Scaffolding skipped (--scaffold none) — the test-gate policy was still installed"
+  exit 0
+fi
 
 # ── Layer 1 — framework boilerplate, from the official generator ─────────────
 #

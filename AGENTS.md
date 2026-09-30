@@ -86,6 +86,25 @@ The test suite must pass before every commit. Commands: `make test` (see B4).
 
 **Rules:** one test = one behavior · mocks only at system boundaries · deterministic · no arbitrary `sleep`
 
+### The gate
+
+A commit whose staged diff touches source without touching a test is **refused**
+by a hook, not merely discouraged (ADR-002). What counts as source and as test is
+declared in `.claude/test-policy.json`; tests written inside a source file
+(Rust's `#[cfg(test)]`, a nested JUnit class) are recognised too.
+
+A change that genuinely carries no behaviour — a pure rename, a move — passes with
+a trailer that states why:
+
+```
+refactor(api): rename Handler to Controller
+
+Test-Exempt: pure rename, behaviour unchanged, existing suite still covers it
+```
+
+The reason stays in the history where a reviewer sees it. `--no-verify` is denied.
+A rising rate of exemptions means the policy's globs need fixing, not the rule.
+
 ---
 
 ## A5 · SECURITY — SYSTEMATIC CHECKLIST

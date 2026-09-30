@@ -59,6 +59,13 @@ for target in install test lint typecheck build dev audit check; do
 done
 ok "the eight contract targets are declared"
 
+has "$P" ".claude/test-policy.json"     "test-gate policy installed"
+if grep -q '"src/\*\*"' "$P/.claude/test-policy.json" 2>/dev/null; then
+  ok "policy reflects the stack's own layout"
+else
+  ko "policy reflects the stack's own layout" "generic globs only"
+fi
+
 printf '\n\033[0;36midempotence\033[0m\n'
 cp "$P/AGENTS.md" "$TMP/agents-before.md"
 "$ROOT/init.sh" struct-demo rust "$P" --scaffold structure --yes >/dev/null 2>&1
@@ -71,6 +78,7 @@ fi
 printf '\n\033[0;36magent selection\033[0m\n'
 C="$TMP/claude-only"
 "$ROOT/init.sh" claude-demo go "$C" --agent claude --scaffold none --yes >/dev/null 2>&1
+has "$C" ".claude/test-policy.json" "policy installed even with --scaffold none"
 has "$C" "CLAUDE.md" "claude-only: CLAUDE.md present"
 hasnt "$C" "opencode.json" "claude-only: no opencode config"
 hasnt "$C" ".opencode" "claude-only: no .opencode directory"

@@ -5,6 +5,7 @@
  * runs as hooks, so both agents enforce one implementation.
  *
  *   .claude/hooks/block-commit-secrets.sh  → blocks a commit carrying a secret
+ *   .claude/hooks/require-tests.sh         → blocks a commit that skips its tests
  *   .claude/hooks/scan-secrets.sh          → warns after writing a likely secret
  *
  * Script exit contract:  0 = clean · 0 + stderr = warning · 2 = block
@@ -36,12 +37,21 @@ export const Guardrails = async ({ $, directory, worktree, client }) => {
       const command = output?.args?.command
       if (typeof command !== "string" || !COMMIT_RE.test(command)) return
 
-      const result = await $`${hook("block-commit-secrets.sh")} ${command}`.cwd(root).nothrow().quiet()
+      // Both gates run, in the order a reviewer would care about: a leaked secret
+      // first, a missing test second.
+      for (const [script, fallback] of [
+        ["block-commit-secrets.sh", "Commit blocked: a secret was found in the staged changes."],
+        ["require-tests.sh", "Commit blocked: source changed without a test (AGENTS.md A4)."],
+      ]) {
+        const result = await $`${hook(script)} ${command}`.cwd(root).nothrow().quiet()
+        const message = result.stderr.toString().trim()
 
-      if (result.exitCode === 2) {
-        const reason = result.stderr.toString().trim() || "Commit blocked: a secret was found in the staged changes."
-        await log("warn", "blocked a commit carrying a secret")
-        throw new Error(reason)
+        if (result.exitCode === 2) {
+          await log("warn", `${script} blocked a commit`)
+          throw new Error(message || fallback)
+        }
+        // Exit 0 with output is an advisory the author should still see.
+        if (message) await log("info", message)
       }
     },
 

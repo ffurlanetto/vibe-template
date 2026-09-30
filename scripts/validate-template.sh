@@ -75,6 +75,26 @@ for generated in .opencode/agents/*.md .opencode/commands/*.md; do
     || ko "$generated" "missing DO NOT EDIT banner"
 done
 
+printf '\n\033[0;36mTest-gate policies\033[0m\n'
+for policy in .claude/test-policy.json templates/common/.claude/test-policy.json; do
+  if [ ! -f "$policy" ]; then
+    ko "$policy" "missing"
+  elif python3 -c "
+import json, sys
+required = {'version', 'sources', 'tests', 'exempt', 'test_markers'}
+data = json.load(open(sys.argv[1]))
+missing = required - set(data)
+sys.exit(1 if missing else 0)
+" "$policy" 2>/dev/null; then
+    ok "$policy declares every required key"
+  else
+    ko "$policy" "a required key is missing (version, sources, tests, exempt, test_markers)"
+  fi
+done
+count=$(grep -lc 'TEST_SOURCES=' scripts/scaffold/*.sh 2>/dev/null | wc -l | tr -d ' ')
+[ "$count" = "14" ] && ok "all 14 stack modules declare a test boundary" \
+  || ko "stack modules" "only $count of 14 declare TEST_SOURCES"
+
 printf '\n\033[0;36mHygiene\033[0m\n'
 found="$(find . -name '.DS_Store' -not -path './.git/*' | head -5)"
 [ -z "$found" ] && ok "no .DS_Store committed" || ko "hygiene" ".DS_Store present: $found"

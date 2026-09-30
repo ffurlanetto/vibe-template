@@ -5,6 +5,9 @@ STACK_TIER="A"
 STACK_LABEL="Go 1.23 / chi"
 STACK_REQUIRES="go"
 STACK_DIRS="cmd/server internal/health internal/example internal/platform/config internal/platform/logging"
+# Test gate boundary (ADR-002): what counts as source, what counts as a test.
+TEST_SOURCES="cmd/** internal/** pkg/**"
+TEST_PATTERNS="**/*_test.go"
 CMD_INSTALL="go mod download"
 CMD_TEST="go test ./... -race -count=1 -cover"
 CMD_LINT="gofmt -l . | (! grep .) && go vet ./...

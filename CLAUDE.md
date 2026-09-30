@@ -20,12 +20,15 @@ This section applies to **Claude Code only** — opencode has the equivalent in
 
 ## Guarantees enforced outside the model
 
-Two hooks run regardless of what the model decides:
+Three hooks run regardless of what the model decides:
 
 - **PostToolUse** on `Edit|Write` → `.claude/hooks/scan-secrets.sh` warns on a likely
   hardcoded secret in the file just written.
 - **PreToolUse** on `Bash` matching `git commit*` → `.claude/hooks/block-commit-secrets.sh`
   inspects the staged diff and **denies** the commit if it finds a secret.
+- **PreToolUse** on `Bash` matching `git commit*` → `.claude/hooks/require-tests.sh`
+  **denies** a commit that changes source without changing a test, unless it carries
+  a `Test-Exempt:` trailer with a reason (ADR-002).
 
 Both read their JSON payload on **stdin** and are the same scripts the opencode
 plugin calls. Test them with `make test-hooks`.
