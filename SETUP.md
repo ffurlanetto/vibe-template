@@ -37,6 +37,7 @@ wrong code.
 /commit                   conventional commit, behind the quality gate
 /pr                       a description a reviewer can act on
 /ship                     branch → push → draft PR → wait for CI → ready
+/build                    cohort + jury + quorum, for expensive changes
 ```
 
 Other skills when the situation calls for them: `/spec` before a user-facing
@@ -60,6 +61,8 @@ crowd the conversation you are actually having.
 | `test-engineer` | filling coverage gaps, regression tests | yes |
 | `debugger` | root-causing a failure, minimal fix | yes |
 | `docs-writer` | READMEs, ADRs, runbooks, doc comments | yes |
+| `implementer` | executing a certified plan in an isolated worktree | yes |
+| `consolidator` | combining named contributions from several candidates | yes |
 
 In Claude Code, ask for one by name. In opencode, mention it: `@architect`.
 
@@ -67,11 +70,16 @@ In Claude Code, ask for one by name. In opencode, mention it: `@architect`.
 
 ## 4. The guardrails
 
-Two checks run outside the model, so a persuasive prompt cannot disable them:
+Three checks run outside the model, so a persuasive prompt cannot disable them:
 
 - writing a file that looks like it holds a secret produces a warning naming the
   line, with the value masked;
-- committing a staged diff that contains one is **blocked**.
+- committing a staged diff that contains one is **blocked**;
+- committing source with no test is **refused**, unless the commit carries a
+  `Test-Exempt:` trailer with a reason, which stays in the history.
+
+A fourth hook observes rather than guards: `make agents` shows what every subagent
+has been doing.
 
 ```bash
 make test-hooks     # 10 assertions, both invocation modes

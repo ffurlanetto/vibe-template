@@ -60,6 +60,10 @@ must reach both agents belongs in `AGENTS.md`.
 must equal the directory name, be 1–64 characters, lowercase alphanumeric with
 single hyphens. `make validate` checks this.
 
+**`isolation: worktree` is Claude Code only.** The cohort in `/build` runs its
+candidates in parallel worktrees there; opencode runs the same protocol
+sequentially. Same verdicts, more wall-clock time.
+
 **Claude model aliases are not opencode model ids.** The generator drops
 `model:` when translating a subagent: an opencode subagent inherits the model of
 the agent that invoked it. Set a provider-qualified model in
