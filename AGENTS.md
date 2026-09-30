@@ -178,6 +178,7 @@ and opencode. Invoke with `/<name>`; an agent may also select one on its own.
 | `/perf-audit` | Performance budgets (B6) and anti-patterns |
 | `/commit` | Conventional commit with pre-commit gates |
 | `/pr` | Pull request description from the diff |
+| `/ship` | Branch → commit → push → draft PR → wait for CI → ready (A14) |
 | `/prime` | Load project context at the start of a session |
 
 ---
@@ -285,6 +286,55 @@ Reference checklist: OWASP Top 10 for LLM Applications.
 - **New dependency = a decision**: justify it in the PR (size, maintenance, licence, CVEs)
 - **`make audit`** runs in CI and blocks on critical CVEs
 - Prefer the standard library over a 3-line dependency
+
+---
+
+## A14 · DELIVERY FLOW
+
+The path from a change to a merged change. Every value it depends on — forge,
+branch convention, required checks, merge strategy — is declared in **B8**, so an
+agent reads it rather than guessing.
+
+### Never commit on the integration branch
+
+A branch comes **before** the first edit, not after the work is done:
+
+```bash
+git fetch origin <main>
+git checkout -b <branch convention from B8> origin/<main>
+```
+
+Already on a branch for this change? Stay on it. One change, one branch.
+
+### Push opens a draft
+
+A push is followed by a **draft** pull request — always, including for a change
+you consider finished. The draft is where CI runs and where a reviewer can look
+early; it costs nothing and it makes work in progress visible.
+
+### Ready is earned, not declared
+
+A pull request moves out of draft only when **every** criterion is green:
+
+- [ ] CI passes on the head commit — not on an earlier one
+- [ ] `make check` passes locally
+- [ ] every review thread is resolved
+- [ ] no merge conflict with the base branch
+- [ ] the description follows the repository template
+
+### Wait for the build, then act
+
+After pushing, the agent **waits for the build result**. It does not report
+"pushed, should be fine" and move on.
+
+- Green → promote to ready, and say so
+- Red → read the failure, fix it, push again, wait again
+- Still red after the fix → say precisely what fails and what you need. Never
+  disable a test, never re-run hoping for a different outcome (A4)
+- Timed out (budget in B8) → hand back the check status as it stands rather than
+  waiting indefinitely
+
+`/ship` performs this flow end to end.
 
 ---
 
@@ -405,12 +455,68 @@ The stack-specific implementation lives in the generated `Makefile`.
 
 ---
 
-## B8 · TEAM CONTEXT & WORKFLOW
+## B8 · TEAM CONTEXT & DELIVERY
+
+> Agents read this section instead of guessing. An empty field is a question an
+> agent will have to ask, or worse, answer on its own.
+
+### Forge and git model
 
 ```
-Main branches    : <main | master | develop>
-Merge strategy   : <PR with mandatory review | trunk-based | gitflow>
+Forge            : <github | gitlab | bitbucket>
+Repository URL   : <https://...>
+Git model        : <trunk-based | github-flow | gitflow>
+Integration branch : <main | master | develop>
+Release branches : <none | release/x.y>
+Protected branches : <which, and what protection>
+```
+
+### Branch naming
+
+```
+Convention       : <feat/PROJ-123-short-slug | feature/... | user/topic>
+Types allowed    : <feat | fix | chore | docs | refactor | perf | security>
+Lifetime         : <deleted on merge | kept>
+```
+
+### Commits, tags and versions
+
+```
+Commit convention : Conventional Commits (A3)
+Versioning        : <SemVer 2.0.0>
+Tag format        : <vX.Y.Z>  — e.g. v3.1.0
+Pre-release       : <vX.Y.Z-rc.N | none>
+Who tags          : <maintainer | release pipeline>
+Changelog source  : <CHANGELOG.md, Keep a Changelog | generated from commits>
+```
+
+### Pull requests
+
+```
+Opened as         : draft (A14)
+Ready criteria    : CI green on head · make check green · threads resolved ·
+                    no conflict · template followed
+Required approvals: <n>  — <who, or CODEOWNERS>
+Merge strategy    : <squash | merge commit | rebase>
+Branch on merge   : <delete | keep>
+Description       : .github/pull_request_template.md
+```
+
+### CI
+
+```
+Provider          : <GitHub Actions | GitLab CI | Bitbucket Pipelines | ...>
+Required checks   : <exact check names that must pass>
+Typical duration  : <n minutes>
+Agent wait budget : <20 minutes>  — after this, hand back the status as it stands
+Watch command     : <gh pr checks --watch | glab ci status --live | ...>
+```
+
+### Environments and ownership
+
+```
 Environments     : <dev | staging | prod>
-Code review      : <required approvers, criteria>
-Deploy gate      : <who can deploy to prod>
+Deploy gate      : <who can deploy to prod, and how>
+Code owners      : <.github/CODEOWNERS, or who reviews what>
+On-call / runbooks : <docs/runbooks/>
 ```

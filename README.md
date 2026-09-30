@@ -41,7 +41,7 @@ only adds what is missing.
 **A plan-first workflow.** No implementation before an approved plan, and the
 plan is a contract: any deviation is flagged and re-approved.
 
-**Twelve skills**, invoked with `/name` and read by *both* agents:
+**Thirteen skills**, invoked with `/name` and read by *both* agents:
 
 | | | |
 |---|---|---|
@@ -49,6 +49,7 @@ plan is a contract: any deviation is flagged and re-approved.
 | `/tdd` | `/debug` | `/review` |
 | `/security-audit` | `/deps-audit` | `/perf-audit` |
 | `/commit` | `/pr` | `/prime` |
+| `/ship` | | |
 
 **Seven subagents** with isolated context — `architect`, `test-architect`,
 `code-reviewer`, `security-auditor`, `test-engineer`, `debugger`, `docs-writer`.
@@ -140,7 +141,7 @@ AGENTS.md
 ```
 AGENTS.md · CLAUDE.md · opencode.json · Makefile · init.sh
 .claude/
-  skills/      12 skills, shared by both agents
+  skills/      13 skills, shared by both agents
   agents/      7 subagents
   hooks/       guardrail scripts (stdin JSON or argv)
   presets/     14 stack conventions for section B3

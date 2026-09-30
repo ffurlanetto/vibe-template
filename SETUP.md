@@ -36,6 +36,7 @@ wrong code.
 /review                   quality, security and performance grids
 /commit                   conventional commit, behind the quality gate
 /pr                       a description a reviewer can act on
+/ship                     branch → push → draft PR → wait for CI → ready
 ```
 
 Other skills when the situation calls for them: `/spec` before a user-facing
