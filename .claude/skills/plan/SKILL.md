@@ -5,16 +5,23 @@ argument-hint: [request to plan]
 allowed-tools: Read, Glob, Grep, Bash(git status), Bash(git diff*), Bash(git log*)
 ---
 
-Analyze the request below and produce a complete implementation plan.
+Analyze the request below and produce a plan an implementer can execute **without
+arbitrating anything**.
+
+That is the bar. If a coding agent reading this plan would have to decide where a
+type lives, what an error returns, or which of two designs to follow, the plan is
+not finished — no matter how complete the step list looks.
 
 **Absolute rules:**
-- Exhaustiveness: list every file touched, every required test, every impacted component
-- Explicitly identify regression risks
+- Every architectural question raised during analysis gets an answer *here*, with
+  its reason. "Questions ouvertes" must end up empty
+- Every file touched is named with its full path, and every public signature it
+  gains or changes is written out
+- Every step references the test scenarios (`SC-n`) it must satisfy
 - Do NOT write any code — plan only
-- End with the mandatory approval line
+- End with the approval line
 
-**Adapt the plan to the language and stack defined in Part B of AGENTS.md.**
-The test, lint, and build commands to reference are the `make` targets defined in B4.
+**Adapt to the stack in Part B of AGENTS.md.** Commands are the `make` targets in B4.
 
 ---
 
@@ -25,26 +32,50 @@ The test, lint, and build commands to reference are the `make` targets defined i
 [Problem solved, value delivered, relationship to project components]
 
 ### Scope
-- Files created    : [list with full paths]
-- Files modified   : [list with full paths]
+- Files created    : [full paths]
+- Files modified   : [full paths]
 - Files deleted    : [list or "none"]
-- Impacted components : [list of modules/services/packages involved]
-- ADR required : yes / no — [if yes: proposed ADR title]
-- Spec required : yes / no — [if yes: proposed SPEC title]
+- Impacted components : [modules/services/packages]
+- ADR required  : yes / no — [if yes: proposed title]
+- Spec required : yes / no — [if yes: proposed title]
+
+### Decisions taken
+[Every question the analysis raised, answered. This is what stops an implementer
+from doing architecture in passing.]
+
+| # | Question | Decision | Why |
+|---|----------|----------|-----|
+| D1 | [where does X live / what does Y return / which of A or B] | [the answer] | [the reason, in one line] |
+
+### Open questions
+[Blocking ambiguities. **If this section is not empty, the plan is not approvable** —
+resolve them or return to /spec.]
+- [question, or "none"]
+
+### Contracts
+[Per file, what the implementer writes. Signatures, not prose.]
+
+**`path/to/file.ext`**
+- `functionName(arg: Type, ...) -> ReturnType` — [what it guarantees]
+- Raises / returns on error: [case → error type → status code → client message → log level]
+- May depend on: [allowed imports]; must not depend on: [forbidden direction]
+
+### Test scenarios
+[From /spec or the test-architect agent. The plan carries them; it does not invent them.]
+
+| ID | Given | When | Then | Level |
+|----|-------|------|------|-------|
+| SC-1 | ... | ... | ... | unit |
 
 ### Implementation steps
-1. [Precise action — file(s) involved]
+[Each step names its files and the scenarios it makes pass.]
+
+1. [Precise action] — `file(s)` — satisfies SC-1, SC-2
 2. [...]
 
-### Required tests
-- Unit        : [classes / functions / methods to cover]
-- Integration : [interactions to test — or "not applicable"]
-- Regression  : [what could break, test suite to run]
-- Security    : [checkpoints — or "not applicable"]
-
 ### Acceptance criteria
-- [ ] [Measurable criterion 1]
-- [ ] [Measurable criterion 2]
+- [ ] Every `SC-n` has a test that failed before the change
+- [ ] [Measurable criterion]
 - [ ] `make check` green — zero regressions
 - [ ] Security checklist (A5) completed
 
@@ -57,7 +88,19 @@ The test, lint, and build commands to reference are the `make` targets defined i
 - [ ] README / CHANGELOG updated if applicable
 
 ---
+Certification: [ ] executable without arbitration — reviewed by `architect`
 ✅ Awaiting approval before implementation.
 ```
+
+## Before you present it
+
+Hand the plan to the `architect` agent. Its verdict is `PLAN-CERTIFIED` or
+`PLAN-BLOCKED` with the arbitrations still left open. A blocked plan goes back
+around; it is not presented for approval.
+
+Skip that round only for a change confined to one file with no new public
+signature — and say that you skipped it.
+
+---
 
 Request to analyze: $ARGUMENTS

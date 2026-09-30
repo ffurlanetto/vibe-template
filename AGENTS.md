@@ -14,11 +14,14 @@
 
 **For every request, without exception:**
 
-1. **ANALYZE** the request — impacts, dependencies, regression risks
-2. **WRITE** a structured plan (format: `/plan`)
-3. **WAIT** for explicit approval — accepted: `ok` · `proceed` · `go` · `approved` · `✓`
-4. **IMPLEMENT** following the approved plan, step by step
-5. **VERIFY**: `make check` green · zero regressions
+1. **ANALYZE** the request — impacts, dependencies, regression risks, test scenarios
+2. **WRITE** a structured plan (format: `/plan`) — every architectural question
+   answered in it, "Open questions" empty
+3. **CERTIFY** — the `architect` agent confirms the plan is executable without
+   arbitration. A blocked plan is not presented for approval
+4. **WAIT** for explicit approval — accepted: `ok` · `proceed` · `go` · `approved` · `✓`
+5. **IMPLEMENT** following the approved plan, step by step
+6. **VERIFY**: `make check` green · zero regressions
 
 > ⛔ No code before the plan is approved.
 > ⛔ Any deviation from the approved plan must be flagged and re-approved.
