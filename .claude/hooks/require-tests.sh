@@ -16,7 +16,11 @@ HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HOOK_DIR/lib.sh"
 
 COMMAND="${1:-}"
+STDIN_MODE=""
 if [ -z "$COMMAND" ]; then
+  # No argv: Claude Code, which sends JSON on stdin and reads JSON back on stdout.
+  # The opencode plugin passes the command as argv and reads stderr instead.
+  STDIN_MODE="yes"
   PAYLOAD="$(hook_stdin_json)"
   COMMAND="$(json_field "$PAYLOAD" tool_input command)"
 fi
@@ -155,6 +159,13 @@ inline = [line for line in os.environ.get("ADDED_LINES", "").splitlines()
 
 result = {"warning": warning, "sources": buckets["sources"], "tests": buckets["tests"]}
 
+command = os.environ["COMMIT_COMMAND"]
+# Read the trailer up front: it is needed to waive a blocked commit, and equally
+# to notice one that never needed waiving. An editor session and an unreadable
+# -F both yield an empty message, and nothing is claimed about either.
+message = "" if uses_editor(command) else commit_message(command)
+trailer = re.search(r"^[ \t]*Test-Exempt:[ \t]*(.+)$", message, re.MULTILINE)
+
 if not buckets["sources"]:
     result["verdict"] = "pass"
 elif buckets["tests"] or inline:
@@ -162,12 +173,10 @@ elif buckets["tests"] or inline:
     if inline and not buckets["tests"]:
         result["inline"] = inline[0][:80]
 else:
-    command = os.environ["COMMIT_COMMAND"]
     if uses_editor(command):
         result["verdict"] = "no-message"
     else:
-        match = re.search(r"^[ \t]*Test-Exempt:[ \t]*(.+)$",
-                          commit_message(command), re.MULTILINE)
+        match = trailer
         reason = match.group(1).strip() if match else ""
         if len(reason) >= 15:
             result["verdict"] = "exempt"
@@ -177,6 +186,18 @@ else:
             result["reason"] = reason
         else:
             result["verdict"] = "block"
+
+# A trailer on a commit the gate would have passed anyway. Reported, never
+# refused: this is a habit, not a defect, and a gate that blocked on habits is
+# the kind contributors learn to route around — which is the whole reason
+# ADR-002 gave the rule an auditable way out rather than leaving --no-verify as
+# the path of least resistance.
+#
+# The reason itself is deliberately not carried out of here. A commit message can
+# say anything, including the name of a credential being rotated, and this text
+# is on its way to a terminal and to another model's context.
+if result["verdict"] == "pass" and trailer:
+    result["needless_exempt"] = "yes"
 
 print(json.dumps(result))
 PY
@@ -188,7 +209,16 @@ WARNING="$(read_field warning)"
 [ -n "$WARNING" ] && printf '⚠️  require-tests: %s\n' "$WARNING" >&2
 
 case "$(read_field verdict)" in
-  pass) exit 0 ;;
+  pass)
+    if [ -n "$(read_field needless_exempt)" ]; then
+      ADVICE="Test-Exempt: the trailer was not required for this commit — the test gate passes without it."
+      printf 'ℹ️  %s\n   Kept as a reflex, a waiver stops meaning anything when it is genuinely needed.\n' \
+        "$ADVICE" >&2
+      # Claude Code reads stdout; the opencode plugin only surfaces stderr, and a
+      # JSON line on its stdout would be noise it has no contract for.
+      [ -n "$STDIN_MODE" ] && claude_context "PreToolUse" "$ADVICE"
+    fi
+    exit 0 ;;
   exempt)
     printf '✅ Test gate waived — %s\n   The reason stays in the commit, where a reviewer will see it.\n' \
       "$(read_field reason)" >&2
