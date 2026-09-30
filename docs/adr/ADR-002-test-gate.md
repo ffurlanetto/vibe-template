@@ -4,6 +4,8 @@
 **Status:** Accepted
 **Deciders:** vibe-template maintainers
 **Component(s):** `.claude/hooks/`, `.claude/skills/{plan,spec,tdd,review}`, scaffolder
+**Refined by:** v3.3.0 — a `Test-Exempt:` trailer on a commit the gate would have
+passed anyway is now reported as unnecessary. Advisory, never blocking.
 
 ---
 

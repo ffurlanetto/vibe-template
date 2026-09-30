@@ -4,6 +4,56 @@ All notable changes to this template are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) ·
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] — 2026-09-30
+
+Three seams v3.2.0 left open, closed. The template can read its own contract, a
+waiver used out of habit is noticed, and the cohort's arithmetic has tests.
+
+### Added
+
+- **The template's own Part B** (ADR-006). `AGENTS.md` keeps Part A and gains a
+  Part B filled in for vibe-template itself — forge, branch convention, tag
+  format, the exact required check names, merge strategy. The blank Part B a new
+  project starts from moved to `templates/common/AGENTS.part-b.md`, and `init.sh`
+  joins the two. Neither half exists twice, so neither can drift. Agents working
+  on the template stop guessing at facts the repository already knows
+- **`scripts/quorum.py`** (ADR-007) — the cohort's arithmetic as a pure function:
+  the objective gate, 2-of-3, the blocking axes, 21/30, the tie-break, the ratchet,
+  the ceiling and the diminishing-returns stop. 64 assertions at the boundaries
+  rather than near them. Malformed input refuses with exit 2 and decides nothing
+- **A notice for a `Test-Exempt:` trailer that was never needed.** Advisory, never
+  blocking, on both invocation modes
+- `make test-quorum`, and the same target in a generated project's `Makefile`
+- Delivery conventions in `CONTRIBUTING.md` — branch first, draft always, ready
+  earned, tags by the maintainer
+
+### Changed
+
+- `/build` §5 has each juror emit its verdict as JSON, so nobody transcribes free
+  text into numbers; §6 calls `quorum.py` and requires its output in the report
+- `/build` §0 no longer sends a `trivial` change to step 5, which is the jury a
+  trivial change does not convene
+- The ratchet is documented as a field (`ratchet` · `base`), not a fifth decision,
+  and a rejected iteration spends a ceiling slot
+
+### Fixed
+
+- **A project name containing `&` or `|` corrupted section B1.** The substitution
+  used `sed "s|<PROJECT_NAME>|$NAME|g"`: `|` was the delimiter and `&` means "the
+  whole match", so `a&b|c` failed outright and — silently, which is worse —
+  `Foo & Bar` produced `Project name : Foo <PROJECT_NAME> Bar`, reinserting the
+  placeholder into the one file meant to have none. It is a literal replace now
+- `SETUP.md` advertised 10 hook assertions; there are 52
+
+### Security
+
+- One new permission entry, `Bash(python3 scripts/quorum.py*)`, narrow and
+  read-only. Naming a `make` target to slip under the existing `Bash(make test*)`
+  grant would have dodged the permission by abusing the command contract
+- `quorum.py` never echoes a juror's prose: strengths and findings are model
+  output about someone's source tree and may quote a credential
+- The needless-trailer notice does not quote the reason back, for the same reason
+
 ## [3.2.0] — 2026-09-30
 
 Testing becomes a constraint, the plan becomes executable, agents become
