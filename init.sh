@@ -179,6 +179,10 @@ copy ".claude/hooks"
 copy ".claude/presets/${STACK}.md" ".claude/presets/${STACK}.md"
 copy "scripts/test-hooks.sh"
 copy "scripts/show-ledger.sh"
+# /build reads these; .claude/skills is copied whole, so a project that gets the
+# skill must get the script it calls, or the skill points at nothing.
+copy "scripts/quorum.py"
+copy "scripts/test-quorum.sh"
 copy "docs/DUAL-AGENT.md"
 copy ".mcp.json.example"
 

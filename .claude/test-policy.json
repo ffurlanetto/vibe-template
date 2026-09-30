@@ -10,7 +10,8 @@
   "tests": [
     "scripts/test-hooks.sh",
     "scripts/test-template.sh",
-    "scripts/validate-template.sh"
+    "scripts/validate-template.sh",
+    "scripts/test-quorum.sh"
   ],
   "exempt": [
     "**/*.md",

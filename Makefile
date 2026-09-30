@@ -37,8 +37,12 @@ agents: ## Show what the subagents have been doing (reads the ledger)
 validate: ## Validate JSON files, skill and agent frontmatter
 	@./scripts/validate-template.sh
 
+.PHONY: test-quorum
+test-quorum: ## Prove the cohort's arithmetic (ADR-007)
+	@./scripts/test-quorum.sh
+
 .PHONY: test
-test: test-hooks ## Run the template test suite
+test: test-hooks test-quorum ## Run the template test suite
 	@./scripts/test-template.sh
 
 .PHONY: lint

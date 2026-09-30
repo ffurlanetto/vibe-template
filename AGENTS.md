@@ -252,6 +252,11 @@ score the candidates (ADR-005). Four rules make it worth the spend:
 - **The iteration count is a ceiling with a ratchet**: an iteration that lowers the
   score, the coverage or the passing test count is rejected
 
+The arithmetic itself — the gate, the 2-of-3, the blocking axes, the 21/30, the
+tie-break, the ratchet and the two stopping conditions — lives in
+`scripts/quorum.py` and is covered by `make test-quorum`. A threshold stated only
+in prose is a threshold that gets rounded off under pressure.
+
 Reaching the ceiling without quorum means stopping and reporting, never shipping
 the best of a bad set.
 

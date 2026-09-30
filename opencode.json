@@ -13,6 +13,7 @@
       "make sync": "allow",
       "make check-sync": "allow",
       "make test-hooks": "allow",
+      "python3 scripts/quorum.py*": "allow",
       "git status*": "allow",
       "git diff*": "allow",
       "git log*": "allow",
