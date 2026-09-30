@@ -44,12 +44,15 @@ for agent in .claude/agents/*.md; do
   base="$(basename "$agent" .md)"
   name="$(awk -F': *' '/^name:/{print $2; exit}' "$agent")"
   desc="$(awk -F': *' '/^description:/{print $2; exit}' "$agent")"
+  turns="$(awk -F': *' '/^maxTurns:/{print $2; exit}' "$agent")"
   if [ "$name" != "$base" ]; then
     ko "$base" "frontmatter name '$name' must match the file name"
   elif [ -z "$desc" ]; then
     ko "$base" "missing description"
+  elif ! printf '%s' "$turns" | grep -qE '^[0-9]+$'; then
+    ko "$base" "missing a maxTurns budget — an agent with no ceiling can loop"
   else
-    ok "$base"
+    ok "$base (maxTurns $turns)"
   fi
 done
 

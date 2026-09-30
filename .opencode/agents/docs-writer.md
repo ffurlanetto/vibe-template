@@ -2,6 +2,7 @@
 description: "Writes and updates project documentation — READMEs, ADRs, specs, runbooks, doc comments on public exports, changelog entries. Use when documentation must be created or brought back in sync with the code."
 mode: subagent
 temperature: 0.1
+steps: 20
 permission:
   bash:
     "*": deny

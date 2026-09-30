@@ -2,6 +2,7 @@
 description: "Reviews a diff for correctness, design, tests and readability. Use after implementing a change and before committing or opening a pull request. Read-only — it reports, it does not fix."
 mode: subagent
 temperature: 0.1
+steps: 20
 permission:
   bash:
     "*": deny

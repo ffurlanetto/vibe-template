@@ -2,6 +2,7 @@
 description: "Designs the test scenario matrix for a feature before any code exists — nominal paths, boundaries, error cases, concurrency, security. Use during analysis, from a spec or a request, so the plan carries scenarios rather than intentions. Read-only."
 mode: subagent
 temperature: 0.1
+steps: 15
 permission:
   bash:
     "*": deny

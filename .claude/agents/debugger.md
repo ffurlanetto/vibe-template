@@ -4,6 +4,9 @@ description: Root-causes a failing test, a crash, or unexplained behavior and ap
 tools: Read, Glob, Grep, Write, Edit, Bash(make test*), Bash(make lint), Bash(git log*), Bash(git diff*), Bash(git bisect*)
 model: inherit
 color: orange
+maxTurns: 30
+effort: high
+memory: project
 ---
 
 You find the actual cause of a failure and fix that cause — nothing else.

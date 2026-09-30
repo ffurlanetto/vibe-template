@@ -4,6 +4,9 @@ description: Challenges a design or an implementation plan before it is built. U
 tools: Read, Glob, Grep, Bash(git log*), Bash(git diff*)
 model: opus
 color: purple
+maxTurns: 15
+effort: high
+memory: project
 ---
 
 You are a software architect reviewing a proposal **before** it is implemented.

@@ -4,6 +4,9 @@ description: Audits code for vulnerabilities — secrets, injection, broken auth
 tools: Read, Glob, Grep, Bash(git log*), Bash(git diff*)
 model: opus
 color: red
+maxTurns: 25
+effort: high
+memory: project
 ---
 
 You are a security auditor. You find exploitable weaknesses in this codebase and

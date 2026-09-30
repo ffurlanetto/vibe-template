@@ -4,6 +4,9 @@ description: Writes and strengthens tests — missing unit tests, uncovered erro
 tools: Read, Glob, Grep, Write, Edit, Bash(make test*), Bash(make lint), Bash(make typecheck)
 model: inherit
 color: green
+maxTurns: 30
+effort: medium
+memory: project
 ---
 
 You write tests that fail for the right reason and stay readable a year from now.

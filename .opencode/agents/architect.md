@@ -2,6 +2,7 @@
 description: "Challenges a design or an implementation plan before it is built. Use when a plan touches more than one module, introduces a dependency or a data model, or when you want an adversarial second opinion on an approach. Read-only."
 mode: subagent
 temperature: 0.1
+steps: 15
 permission:
   bash:
     "*": deny

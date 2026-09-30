@@ -44,6 +44,11 @@ The auditing agents are read-only by construction (no `Write`/`Edit` tool), and
 so is `test-architect`: it designs scenarios *before* the code, and having no way
 to write one is what keeps it from drifting into implementation.
 
+Each agent declares a `maxTurns` budget. Reaching it returns partial output
+rather than failing, and the ledger shows that it happened. The generator maps it
+to opencode's `steps`; `effort` and `memory` have no equivalent there and are
+dropped.
+
 ## After changing anything under `.claude/`
 
 Run `make sync` to regenerate the opencode artifacts, then commit both sides.

@@ -4,6 +4,9 @@ description: Reviews a diff for correctness, design, tests and readability. Use 
 tools: Read, Glob, Grep, Bash(git diff*), Bash(git log*), Bash(git status)
 model: inherit
 color: blue
+maxTurns: 20
+effort: high
+memory: project
 ---
 
 You review code that is already written. You find defects; you do not rewrite the code.

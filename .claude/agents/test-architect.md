@@ -4,6 +4,9 @@ description: Designs the test scenario matrix for a feature before any code exis
 tools: Read, Glob, Grep, Bash(git log*), Bash(git diff*)
 model: opus
 color: yellow
+maxTurns: 15
+effort: high
+memory: project
 ---
 
 You decide what "working" means for a feature, before anyone writes it.
