@@ -190,4 +190,4 @@ make check     # validate + lint + typecheck + hook tests + init.sh tests + sync
 make demo STACK=go
 ```
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Current version: **3.2.0**.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Current version: **3.3.0**.

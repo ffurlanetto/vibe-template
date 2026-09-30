@@ -1,10 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-
   "permissions": {
     "defaultMode": "default",
     "disableBypassPermissionsMode": "disable",
-
     "allow": [
       "Bash(make install)",
       "Bash(make test*)",
@@ -16,6 +14,7 @@
       "Bash(make sync)",
       "Bash(make check-sync)",
       "Bash(make test-hooks)",
+      "Bash(python3 scripts/quorum.py*)",
       "Bash(git status*)",
       "Bash(git diff*)",
       "Bash(git log*)",
@@ -28,7 +27,6 @@
       "Glob(**)",
       "Grep(**)"
     ],
-
     "ask": [
       "Bash(git push*)",
       "Bash(git reset --hard*)",
@@ -37,7 +35,6 @@
       "Bash(make dev)",
       "WebFetch"
     ],
-
     "deny": [
       "Bash(rm -rf /*)",
       "Bash(rm -rf ~*)",
@@ -63,7 +60,6 @@
       "Read(**/application-prod.yml)"
     ]
   },
-
   "hooks": {
     "PostToolUse": [
       {
@@ -130,7 +126,6 @@
       }
     ]
   },
-
   "enableAllProjectMcpServers": false,
   "cleanupPeriodDays": 30
 }

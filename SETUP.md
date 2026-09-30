@@ -82,7 +82,7 @@ A fourth hook observes rather than guards: `make agents` shows what every subage
 has been doing.
 
 ```bash
-make test-hooks     # 10 assertions, both invocation modes
+make test-hooks     # 52 assertions, both invocation modes
 ```
 
 If a guardrail fires on a false positive, fix the pattern in

@@ -69,6 +69,60 @@ else
   ko "policy reflects the stack's own layout" "generic globs only"
 fi
 
+printf '\n\033[0;36mPart A / Part B composition (ADR-006)\033[0m\n'
+MARKER='# PART B — PROJECT CONFIGURATION'
+
+# The kernel reaches the project verbatim: everything above the marker in the
+# repository's AGENTS.md must be byte-identical to everything above the marker in
+# the generated one. The halves below the marker legitimately differ — that is the
+# whole point of the split — so only the seam is asserted, and it is asserted
+# forever rather than against a commit that will move.
+awk -v m="$MARKER" '$0 == m { exit } { print }' "$ROOT/AGENTS.md"  > "$TMP/kernel-src"
+awk -v m="$MARKER" '$0 == m { exit } { print }' "$P/AGENTS.md"     > "$TMP/kernel-out"
+if cmp -s "$TMP/kernel-src" "$TMP/kernel-out"; then
+  ok "Part A reaches the project byte-identical"
+else
+  ko "Part A reaches the project byte-identical" "$(diff "$TMP/kernel-src" "$TMP/kernel-out" | head -3 | tr '\n' ' ')"
+fi
+
+seam=$(grep -cFx "$MARKER" "$P/AGENTS.md")
+[ "$seam" = "1" ] && ok "the seam occurs exactly once" \
+  || ko "the seam occurs exactly once" "found $seam"
+
+# The project gets a Part B it still has to fill, never this repository's own.
+grep -qF 'Repository URL   : https://github.com/ffurlanetto/vibe-template' "$P/AGENTS.md" \
+  && ko "project gets a blank Part B" "vibe-template's own B8 leaked into the project" \
+  || ok "project gets a blank Part B"
+hasnt "$P" "AGENTS.part-b.md" "the blank Part B ships inside AGENTS.md, not beside it"
+
+# A project name is user input. '&' is the sed replacement's "the whole match" and
+# '|' was the delimiter, so both used to corrupt B1 silently.
+N="$TMP/tricky-name"
+"$ROOT/init.sh" 'a&b|c' go "$N" --scaffold none --yes >/dev/null 2>&1
+if grep -qF 'Project name  : a&b|c' "$N/AGENTS.md" 2>/dev/null; then
+  ok "a project name containing & and | survives intact"
+else
+  ko "a project name containing & and |" "B1 reads: $(grep -m1 'Project name' "$N/AGENTS.md" 2>/dev/null)"
+fi
+
+U="$TMP/utf8-name"
+"$ROOT/init.sh" 'paiement-café' go "$U" --scaffold none --yes >/dev/null 2>&1
+grep -qF 'paiement-café' "$U/AGENTS.md" 2>/dev/null \
+  && ok "a non-ASCII project name survives intact" \
+  || ko "a non-ASCII project name" "not found in AGENTS.md"
+
+# Without the placeholder there is no Part B to compose, and shipping Part A alone
+# would hand the project a file whose second half simply is not there.
+BROKEN="$TMP/broken-template"
+cp -R "$ROOT" "$BROKEN" 2>/dev/null
+rm -rf "$BROKEN/.git" "$BROKEN/templates/common/AGENTS.part-b.md"
+out=$("$BROKEN/init.sh" broken-demo go "$TMP/broken-out" --scaffold none --yes 2>&1); rc=$?
+if [ "$rc" != "0" ] && [ ! -f "$TMP/broken-out/AGENTS.md" ]; then
+  ok "a missing blank Part B aborts instead of shipping half a file"
+else
+  ko "a missing blank Part B aborts" "exit $rc, $(printf '%s' "$out" | tail -1)"
+fi
+
 printf '\n\033[0;36midempotence\033[0m\n'
 cp "$P/AGENTS.md" "$TMP/agents-before.md"
 "$ROOT/init.sh" struct-demo rust "$P" --scaffold structure --yes >/dev/null 2>&1

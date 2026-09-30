@@ -146,6 +146,158 @@ printf 'pub fn g() -> i32 { 2 }\n' > "$GATE/src/plain.rs"
 git -C "$GATE" add src/plain.rs
 check "still blocks source with no inline test" 2 "$(gate 'git commit -m "feat: g"')"
 
+# ── A Test-Exempt trailer that was never needed ──────────────────────────────
+# The gate exits silently whenever no source changed, so a trailer added out of
+# habit passed unremarked — two commits in the v3.2.0 branch carry one. It stays
+# an advisory: exit 0, a line on stderr. A gate that blocked on a reflex would be
+# the kind people route around, which is what ADR-002 exists to avoid.
+NEEDED='the trailer was not required'
+
+# docs/x.md is already in the fixture's baseline commit, so `git add` alone stages
+# nothing and the gate returns before it classifies anything. Give it new content
+# each time, or the docs-only cases assert the early return instead of the rule.
+DOC_REV=0
+stage_doc() {
+  DOC_REV=$((DOC_REV + 1))
+  printf '# doc revision %s\n' "$DOC_REV" > "$GATE/docs/x.md"
+  git -C "$GATE" add docs/x.md
+}
+
+git -C "$GATE" reset -q
+stage_doc
+check "an unnecessary trailer never blocks" 0 \
+  "$(gate 'git commit -m "docs: x
+
+Test-Exempt: documentation only, no behaviour")')"
+case "$(gate_out 'git commit -m "docs: x
+
+Test-Exempt: documentation only, no behaviour")')" in
+  *"$NEEDED"*) ok "says the trailer was not required";;
+  *) ko "says the trailer was not required" "no advisory";;
+esac
+case "$(gate_out 'git commit -m "docs: x"')" in
+  "") ok "stays silent when there is no trailer";;
+  *) ko "stays silent when there is no trailer" "unexpected output";;
+esac
+
+# A reason under 15 characters is refused only when the trailer is load-bearing.
+case "$(gate_out 'git commit -m "docs: x
+
+Test-Exempt: wip")')" in
+  *"$NEEDED"*) ok "an unnecessary short reason is advised, not refused";;
+  *) ko "an unnecessary short reason" "no advisory";;
+esac
+check "an unnecessary short reason still exits 0" 0 \
+  "$(gate 'git commit -m "docs: x
+
+Test-Exempt: wip")')"
+
+# Only a line-anchored trailer counts; the words in prose must not trip it.
+case "$(gate_out 'git commit -m "docs: never write Test-Exempt: inline like this"')" in
+  "") ok "ignores Test-Exempt written mid-line";;
+  *) ko "ignores Test-Exempt written mid-line" "false positive";;
+esac
+
+# An indented trailer is still a trailer, and two of them are still one mistake.
+case "$(gate_out "$(printf 'git commit -m "docs: x\n\n\tTest-Exempt: indented but real enough"')")" in
+  *"$NEEDED"*) ok "sees an indented trailer";;
+  *) ko "sees an indented trailer" "missed";;
+esac
+count=$(gate_out 'git commit -m "docs: x
+
+Test-Exempt: first reason, long enough
+Test-Exempt: second reason, long enough")' | grep -c "$NEEDED")
+[ "$count" = "1" ] && ok "two trailers produce one advisory" \
+  || ko "two trailers produce one advisory" "got $count"
+
+# The message may arrive through -F or --message=; both are read, and a -F
+# pointing nowhere is as unreadable as an editor session.
+printf 'docs: x\n\nTest-Exempt: reason supplied through a file\n' > "$TMP/msg.txt"
+case "$(gate_out "git commit -F $TMP/msg.txt")" in
+  *"$NEEDED"*) ok "reads the trailer from -F";;
+  *) ko "reads the trailer from -F" "missed";;
+esac
+case "$(gate_out 'git commit --message="docs: x
+
+Test-Exempt: reason supplied inline"')" in
+  *"$NEEDED"*) ok "reads the trailer from --message=";;
+  *) ko "reads the trailer from --message=" "missed";;
+esac
+case "$(gate_out "git commit -F $TMP/does-not-exist.txt")" in
+  ""|*"no such"*) ok "an unreadable -F says nothing about a trailer";;
+  *) ko "an unreadable -F says nothing" "unexpected: $(gate_out "git commit -F $TMP/nope.txt")";;
+esac
+case "$(gate_out 'git commit')" in
+  "") ok "editor mode says nothing about a trailer";;
+  *) ko "editor mode says nothing" "the message cannot be read, so nothing may be claimed";;
+esac
+
+# A commit that genuinely needed the trailer must get the waiver, not the advice.
+git -C "$GATE" reset -q
+printf 'def h():\n    return 3\n' > "$GATE/src/h.py"
+git -C "$GATE" add src/h.py
+OUT="$(gate_out 'git commit -m "refactor: h
+
+Test-Exempt: pure rename, behaviour unchanged")')"
+case "$OUT" in
+  *"$NEEDED"*) ko "a required trailer is not called unnecessary" "advised anyway";;
+  *"waived"*) ok "a required trailer is waived, not advised";;
+  *) ko "a required trailer is waived" "no waiver";;
+esac
+
+# Source and test both changed: the trailer was not required either (D13).
+printf 'def test_h():\n    assert True\n' > "$GATE/tests/test_h.py"
+git -C "$GATE" add tests/test_h.py
+case "$(gate_out 'git commit -m "feat: h
+
+Test-Exempt: added out of habit, not needed")')" in
+  *"$NEEDED"*) ok "advises when the test was there all along";;
+  *) ko "advises when the test was there all along" "silent";;
+esac
+
+# Both runtimes. Claude Code sends JSON on stdin and reads stdout; opencode passes
+# argv and surfaces stderr. The stdout payload is asserted to be well-formed and
+# to name the event — not that any runtime renders it.
+git -C "$GATE" reset -q
+stage_doc
+PAYLOAD='{"tool_input":{"command":"git commit -m \"docs: x\n\nTest-Exempt: documentation only, no behaviour\""}}'
+ERR="$( cd "$GATE" && { printf '%s' "$PAYLOAD" | "$HOOKS/require-tests.sh" >/dev/null; } 2>&1 )"
+case "$ERR" in
+  *"$NEEDED"*) ok "advises in stdin mode too";;
+  *) ko "advises in stdin mode too" "no advisory";;
+esac
+STDOUT="$( cd "$GATE" && printf '%s' "$PAYLOAD" | "$HOOKS/require-tests.sh" 2>/dev/null )"
+if printf '%s' "$STDOUT" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if d["hookSpecificOutput"]["hookEventName"]=="PreToolUse" else 1)' 2>/dev/null; then
+  ok "stdin mode emits well-formed PreToolUse JSON"
+else
+  ko "stdin mode emits well-formed PreToolUse JSON" "got: $(printf '%s' "$STDOUT" | head -c 80)"
+fi
+OUT="$(gate_out 'git commit -m "docs: x
+
+Test-Exempt: documentation only, no behaviour")')"
+case "$OUT" in
+  *hookSpecificOutput*) ko "argv mode keeps stdout clean" "JSON leaked into the argv path";;
+  *) ok "argv mode keeps stdout clean";;
+esac
+
+# Nothing staged: git refuses the commit anyway, so the gate says nothing.
+git -C "$GATE" reset -q
+case "$(gate_out 'git commit -m "docs: x
+
+Test-Exempt: nothing is staged at all")')" in
+  "") ok "says nothing when nothing is staged";;
+  *) ko "says nothing when nothing is staged" "spoke about a commit that cannot exist";;
+esac
+
+# A commit message is model output on its way to a terminal: never echo a secret.
+stage_doc
+case "$(gate_out 'git commit -m "docs: x
+
+Test-Exempt: rotating ghp_AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHH now")')" in
+  *ghp_AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHH*) ko "never echoes a credential from the message" "leaked";;
+  *) ok "never echoes a credential from the message";;
+esac
+
 printf '\n\033[0;36mledger.sh\033[0m\n'
 
 LEDGER="$TMP/ledger.jsonl"

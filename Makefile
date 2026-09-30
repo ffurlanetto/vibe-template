@@ -8,6 +8,13 @@ SHELL := /usr/bin/env bash
 PYTHON ?= python3
 SHELL_SOURCES := init.sh $(wildcard scripts/*.sh) $(wildcard scripts/scaffold/*.sh) $(wildcard .claude/hooks/*.sh)
 
+# Python that init.sh copies into a generated project. It lands next to that
+# project's own code and is linted by that project's linter, with that project's
+# rules — so it has to pass them. The python-fastapi preset is the strictest one
+# the template ships, which makes it the right yardstick.
+VENDORED_PY := scripts/quorum.py
+VENDORED_PY_CONFIG := templates/skeleton/python-fastapi/ruff.toml
+
 .PHONY: help
 help: ## Show the available targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -37,8 +44,12 @@ agents: ## Show what the subagents have been doing (reads the ledger)
 validate: ## Validate JSON files, skill and agent frontmatter
 	@./scripts/validate-template.sh
 
+.PHONY: test-quorum
+test-quorum: ## Prove the cohort's arithmetic (ADR-007)
+	@./scripts/test-quorum.sh
+
 .PHONY: test
-test: test-hooks ## Run the template test suite
+test: test-hooks test-quorum ## Run the template test suite
 	@./scripts/test-template.sh
 
 .PHONY: lint
@@ -47,6 +58,13 @@ lint: ## Shellcheck every shell script (skipped if shellcheck is absent)
 		LC_ALL=C.UTF-8 shellcheck -x -S warning $(SHELL_SOURCES) && echo "shellcheck: clean"; \
 	else \
 		echo "shellcheck not installed — skipping (CI enforces it)"; \
+	fi
+	@if command -v ruff >/dev/null 2>&1; then \
+		ruff check --config $(VENDORED_PY_CONFIG) $(VENDORED_PY) >/dev/null \
+		&& ruff format --config $(VENDORED_PY_CONFIG) --check $(VENDORED_PY) >/dev/null \
+		&& echo "vendored python: clean under the shipped ruff config"; \
+	else \
+		echo "ruff not installed — skipping (the bootstrap matrix enforces it)"; \
 	fi
 
 .PHONY: typecheck

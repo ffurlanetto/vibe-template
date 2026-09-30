@@ -2,7 +2,7 @@
 name: build
 description: Run a change end to end with a cohort of implementers and a jury — analysis, certified plan, parallel candidates, objective gate, scored review, quorum, consolidation, bounded iteration. Use for work whose cost of being wrong is higher than the cost of running it several times.
 argument-hint: [the change to build]
-allowed-tools: Read, Glob, Grep, Bash(make *), Bash(git *)
+allowed-tools: Read, Glob, Grep, Bash(make *), Bash(git *), Bash(python3 scripts/quorum.py*)
 ---
 
 Orchestrate the change below. You are the orchestrator: you delegate, you measure,
@@ -24,7 +24,8 @@ Pick a tier and say which one you picked:
 | `standard` | a feature or a fix inside one component | 2 | 3 | 3 |
 | `critical` | security, money, data loss, migration, public API | 3 | 3 | 5 |
 
-Anything below `standard` skips to step 5.
+A `trivial` change never convenes a cohort or a jury: one `implementer`, then
+`/review`, then step 9. It does not call `quorum.py` — there is nothing to count.
 
 ## 1 — Analysis
 
@@ -86,6 +87,18 @@ STRENGTH: [what this candidate does better than the others, named precisely]
 Two instructions to every juror: run the candidate's tests before scoring it, and
 name what it does *better* — that is the input the consolidation step needs.
 
+A third: end with the same verdict as a fenced `json` object.
+
+```json
+{"agent": "code-reviewer", "score": 8, "verdict": "PASS",
+ "blocking": [], "strength": "error paths are exhaustive"}
+```
+
+The block above is what step 6 reads. Asking for it is not ceremony: without it
+somebody has to transcribe free text into numbers, and that somebody is a model
+scoring its own cohort. Transcription is the seam where a verdict can quietly
+become a different verdict, so it is removed rather than supervised.
+
 ## 6 — Quorum
 
 A candidate is accepted when **all** of:
@@ -96,8 +109,42 @@ A candidate is accepted when **all** of:
   blocking, a FAIL there ends it whatever the totals say
 - total score **≥ 21 / 30**
 
-Several candidates pass → take the highest total; on a tie, the one with the
-simpler structure.
+Several candidates pass → the highest total; on a tie, the fewer files changed,
+then the fewer lines, then the lexicographically first id.
+
+**Do not apply these by hand.** Assemble the jurors' JSON blocks into a bundle and
+let `scripts/quorum.py` return the decision:
+
+```bash
+python3 scripts/quorum.py <<'JSON'
+{"iteration": 1, "ceiling": 3, "complementary_strengths": false,
+ "metrics": {"passing_tests": 42, "coverage": 0.84},
+ "history": [],
+ "candidates": [
+   {"id": "c1", "gate": "green", "size": {"files_changed": 4, "lines_changed": 120},
+    "jurors": [ … the three blocks from step 5 … ]}]}
+JSON
+```
+
+It prints one object: `decision` (`ADOPT` · `CONSOLIDATE` · `ITERATE` · `STOP`),
+the winning `candidate`, the `reason`, what was `disqualified` and why, the
+`ratchet` state and the `tie_break` that settled it. Exit 2 means the bundle was
+malformed and **nothing was decided** — fix the bundle, never assume a verdict.
+
+The bundle goes in on stdin and is never written to disk: it carries jurors' prose
+about someone's source tree, and that does not need a file.
+
+**Paste the returned object into the report.** It is the only evidence that the
+arithmetic was applied rather than recalled, and a run whose report has no such
+object is a run where nobody can tell.
+
+Worked examples — each is asserted in `scripts/test-quorum.sh`:
+
+| Gate | Verdicts | Total | Decision |
+|------|----------|-------|----------|
+| green | PASS · PASS · PASS | 21 | `ADOPT` — 21 is inside the threshold, not past it |
+| green | FAIL · PASS · PASS | 27 | not adopted — a `code-reviewer` FAIL ends it whatever the total |
+| green | PASS · PASS · PASS | 18, iteration 3 of 3 | `STOP` — the ceiling, with the blocker named |
 
 ## 7 — Consolidation, only when it is warranted
 
@@ -119,7 +166,11 @@ Three rules keep this from becoming churn:
 
 - **Ceiling**: the tier's iteration count. It is a maximum, never a target
 - **Ratchet**: an iteration that lowers the number of passing tests, the coverage,
-  or the total score is **rejected** — you keep the previous best
+  or the total score is **rejected** — you keep the previous best. The script
+  reports this as `ratchet: "rejected"` with `base: "previous-best"`; it is not a
+  decision of its own, because it answers *what do we build on*, not *what next*.
+  A rejected iteration still spends a slot against the ceiling — otherwise a
+  cohort that regresses every round would loop forever
 - **Diminishing returns**: two iterations with no measurable gain → stop, even at
   iteration 2. A loop optimising a criterion it cannot move is burning budget
 

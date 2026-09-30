@@ -58,3 +58,7 @@ agents: ## Show what the subagents have been doing (reads .claude/run/ledger.jso
 .PHONY: test-hooks
 test-hooks: ## Prove the security guardrails actually fire
 	@if [ -f scripts/test-hooks.sh ]; then ./scripts/test-hooks.sh; else echo "hook tests not installed"; fi
+
+.PHONY: test-quorum
+test-quorum: ## Prove the cohort's arithmetic used by /build
+	@if [ -f scripts/test-quorum.sh ]; then ./scripts/test-quorum.sh; else echo "quorum tests not installed"; fi
