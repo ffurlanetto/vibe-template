@@ -17,7 +17,10 @@ Implement the requested behavior **test-first**. One cycle per behavior — neve
 ## Cycle
 
 ### 🔴 RED — write the failing test
-1. Name it `[Subject]_[Scenario]_[ExpectedResult]` (A4)
+0. Name the scenario you are covering: `SC-n` from the spec or the plan. No
+   scenario id means the behaviour was never agreed — go back to `/spec` or
+   `/plan` rather than inventing it here.
+1. Name the test `[Subject]_[Scenario]_[ExpectedResult]` (A4)
 2. Assert the observable behavior, never the implementation
 3. Run `make test` and **show the failure output**
 4. Verify it fails for the right reason — not an import or syntax error
@@ -38,6 +41,7 @@ Next behavior → back to 🔴. Stop when the acceptance criteria are covered.
 ---
 
 ## Closure checklist
+- [ ] Every `SC-n` in scope has a test, and each one was seen red first
 - [ ] Each behavior has its own test, red first
 - [ ] Nominal AND error paths covered
 - [ ] No conditional logic inside tests

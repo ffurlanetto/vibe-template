@@ -24,6 +24,8 @@ Adapt verifications to the language and stack defined in Part B of AGENTS.md.
 - [ ] Reasonable cyclomatic complexity, one abstraction level per function
 
 ## Grid — Tests
+- [ ] **Every `SC-n` in the spec or plan has a test — an uncovered scenario is blocking**
+- [ ] No test was weakened or skipped to get the suite green
 - [ ] Every new public function / method has at least one test
 - [ ] Nominal cases AND error cases covered
 - [ ] Naming convention respected: `[Subject]_[Scenario]_[Result]`

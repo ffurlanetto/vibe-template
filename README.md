@@ -50,9 +50,9 @@ plan is a contract: any deviation is flagged and re-approved.
 | `/security-audit` | `/deps-audit` | `/perf-audit` |
 | `/commit` | `/pr` | `/prime` |
 
-**Six subagents** with isolated context — `architect`, `code-reviewer`,
-`security-auditor`, `test-engineer`, `debugger`, `docs-writer`. The auditors are
-read-only by construction: they have no `Write` tool at all.
+**Seven subagents** with isolated context — `architect`, `test-architect`,
+`code-reviewer`, `security-auditor`, `test-engineer`, `debugger`, `docs-writer`.
+The auditors are read-only by construction: they have no `Write` tool at all.
 
 **Guardrails the model cannot talk its way past.** A hook scans every file
 written for hardcoded secrets, and a second one **blocks** a commit whose staged
@@ -141,7 +141,7 @@ AGENTS.md
 AGENTS.md · CLAUDE.md · opencode.json · Makefile · init.sh
 .claude/
   skills/      12 skills, shared by both agents
-  agents/      6 subagents
+  agents/      7 subagents
   hooks/       guardrail scripts (stdin JSON or argv)
   presets/     14 stack conventions for section B3
   settings.json

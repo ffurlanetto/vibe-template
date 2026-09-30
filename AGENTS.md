@@ -82,6 +82,12 @@ The test suite must pass before every commit. Commands: `make test` (see B4).
 | **E2E** | Critical business workflows | Happy path + edge cases |
 | **Security** | Every endpoint, every crypto op | Auth, perms, injection |
 
+**Scenarios come first.** Test scenarios are designed during analysis, not after
+the code: `/spec` carries a numbered matrix (`SC-n`) tied to the requirements,
+`/plan` repeats it, `/tdd` names the scenario each red test covers, and `/review`
+treats an uncovered scenario as blocking. The `test-architect` agent produces the
+matrix and cannot write code.
+
 **Naming:** `[Subject]_[Scenario]_[ExpectedResult]` — e.g. `CreateUser_WithDuplicateEmail_ThrowsConflictError`
 
 **Rules:** one test = one behavior · mocks only at system boundaries · deterministic · no arbitrary `sleep`

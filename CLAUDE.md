@@ -35,9 +35,11 @@ plugin calls. Test them with `make test-hooks`.
 
 ## Subagents
 
-Delegate to keep the main context clean — `architect`, `code-reviewer`,
-`security-auditor`, `test-engineer`, `debugger`, `docs-writer`.
-The auditing agents are read-only by construction (no `Write`/`Edit` tool).
+Delegate to keep the main context clean — `architect`, `test-architect`,
+`code-reviewer`, `security-auditor`, `test-engineer`, `debugger`, `docs-writer`.
+The auditing agents are read-only by construction (no `Write`/`Edit` tool), and
+so is `test-architect`: it designs scenarios *before* the code, and having no way
+to write one is what keeps it from drifting into implementation.
 
 ## After changing anything under `.claude/`
 

@@ -53,6 +53,7 @@ crowd the conversation you are actually having.
 | Agent | Use it for | Can it write? |
 |-------|-----------|---------------|
 | `architect` | challenging a design *before* it is built | no |
+| `test-architect` | designing the test scenario matrix, before any code | no |
 | `code-reviewer` | reviewing a finished diff | no |
 | `security-auditor` | vulnerabilities and exploit paths | no |
 | `test-engineer` | filling coverage gaps, regression tests | yes |
