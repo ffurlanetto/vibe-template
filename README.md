@@ -41,7 +41,7 @@ only adds what is missing.
 **A plan-first workflow.** No implementation before an approved plan, and the
 plan is a contract: any deviation is flagged and re-approved.
 
-**Twelve skills**, invoked with `/name` and read by *both* agents:
+**Fourteen skills**, invoked with `/name` and read by *both* agents:
 
 | | | |
 |---|---|---|
@@ -49,15 +49,19 @@ plan is a contract: any deviation is flagged and re-approved.
 | `/tdd` | `/debug` | `/review` |
 | `/security-audit` | `/deps-audit` | `/perf-audit` |
 | `/commit` | `/pr` | `/prime` |
+| `/ship` | `/build` | |
 
-**Six subagents** with isolated context — `architect`, `code-reviewer`,
-`security-auditor`, `test-engineer`, `debugger`, `docs-writer`. The auditors are
-read-only by construction: they have no `Write` tool at all.
+**Nine subagents** with isolated context — `architect`, `test-architect`,
+`code-reviewer`, `security-auditor`, `test-engineer`, `debugger`, `docs-writer`,
+plus `implementer` and `consolidator` for the cohort. The auditors are read-only
+by construction: they have no `Write` tool at all. Each declares a turn budget.
 
-**Guardrails the model cannot talk its way past.** A hook scans every file
-written for hardcoded secrets, and a second one **blocks** a commit whose staged
-diff contains one. Both run outside the model, back both agents, and are covered
-by their own test suite (`make test-hooks`).
+**Guardrails the model cannot talk its way past.** Hooks scan every file written
+for hardcoded secrets, **block** a commit whose staged diff contains one, and
+**refuse** a commit that changes source without changing a test — unless it carries
+a `Test-Exempt:` trailer stating why, which stays in the history. A fourth hook
+records every subagent start and stop in a ledger `make agents` renders. All of it
+runs outside the model, backs both agents, and is covered by `make test-hooks`.
 
 **A walking skeleton.** `/health/live` and `/health/ready` per a seed spec, one
 vertical slice (route → service → repository behind an interface), structured
@@ -140,8 +144,8 @@ AGENTS.md
 ```
 AGENTS.md · CLAUDE.md · opencode.json · Makefile · init.sh
 .claude/
-  skills/      12 skills, shared by both agents
-  agents/      6 subagents
+  skills/      14 skills, shared by both agents
+  agents/      9 subagents
   hooks/       guardrail scripts (stdin JSON or argv)
   presets/     14 stack conventions for section B3
   settings.json
@@ -157,9 +161,13 @@ docs/          adr/ · specs/ · runbooks/ · DUAL-AGENT.md · SCAFFOLD.md
 ## Daily workflow
 
 ```
-request → /plan → "ok" → implementation → /review → /commit → /pr
-                                  ↑
-                     hooks refuse the commit if a secret slipped in
+request → /plan (certified) → "ok" → implementation → /review → /ship
+                                              ↑              ↓
+                          hooks refuse a commit with a secret, or with no test
+                                                             ↓
+                                          draft PR → wait for CI → ready
+
+/build runs the same path with a cohort of implementers and a scoring jury
 ```
 
 ---
@@ -182,4 +190,4 @@ make check     # validate + lint + typecheck + hook tests + init.sh tests + sync
 make demo STACK=go
 ```
 
-See [`CONTRIBUTING.md`](CONTRIBUTING.md). Current version: **3.0.0**.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Current version: **3.2.0**.

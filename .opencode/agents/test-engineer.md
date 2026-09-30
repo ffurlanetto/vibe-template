@@ -2,6 +2,7 @@
 description: "Writes and strengthens tests — missing unit tests, uncovered error paths, regression tests for a reported bug, flaky test diagnosis. Use when coverage is the goal rather than new behavior."
 mode: subagent
 temperature: 0.1
+steps: 30
 permission:
   bash:
     "*": deny

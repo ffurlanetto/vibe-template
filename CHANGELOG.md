@@ -4,6 +4,59 @@ All notable changes to this template are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) ·
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] — 2026-09-30
+
+Testing becomes a constraint, the plan becomes executable, agents become
+measurable, and delivery becomes a flow rather than a push.
+
+### Added
+
+- **The test gate** (ADR-002). A hook refuses a commit that changes source
+  without changing a test. The boundary is declared per project in
+  `.claude/test-policy.json`, written from the stack module; tests living inside
+  a source file (Rust's `#[cfg(test)]`, a nested JUnit class) are recognised. The
+  way out is a `Test-Exempt:` trailer with a reason, which stays in the history
+- **Test scenarios in the analysis phase.** `/spec` carries a numbered matrix
+  (`SC-n`) tied to the requirements, `/plan` repeats it, `/tdd` names the scenario
+  each red test covers, `/review` treats an uncovered scenario as blocking. The
+  new `test-architect` agent produces it and has no `Write` tool
+- **A plan that decides everything** — decisions taken, open questions that must
+  be empty, per-file signatures and error contracts, and certification by the
+  `architect` agent before approval
+- **The agent ledger** (ADR-003). Every subagent start and stop lands in
+  `.claude/run/ledger.jsonl`, fed by Claude Code hooks and by the opencode
+  plugin. `make agents` renders it; summaries are secret-masked
+- **Turn budgets** on all agents: `maxTurns`, `effort`, `memory`, mapped to
+  opencode's `steps`
+- **The delivery flow** (ADR-004). A14: a branch before the first edit, a push
+  opens a **draft** PR, ready is earned, and the agent **waits for the build**.
+  B8 becomes the contract it reads — forge, git model, branch and tag conventions,
+  required check names, merge strategy, wait budget. `/ship` runs it end to end
+- **`/build`** (ADR-005): triage, certified plan, cohort of `implementer` agents
+  in isolated worktrees, objective gate before any opinion, a jury of three
+  specialists with scores, quorum (2 of 3, no FAIL on correctness or security,
+  ≥ 21/30), constrained consolidation, and a loop bounded by a ceiling, a ratchet
+  and a diminishing-returns stop
+- ADR-002 to ADR-005; the template now keeps its own ADR index, and the
+  placeholder one ships to generated projects
+
+### Fixed
+
+- The ADR index template was shipped to neither the template nor generated
+  projects. It now lives in `templates/common/docs/adr/` beside the seed ADR-001
+
+### Changed
+
+- `make agents` joins the command contract
+- `AGENTS.md` A1 gains the certification step; A4 gains the gate; A8 gains agent
+  telemetry; A11 gains the cohort rules; A14 is new; B8 is rewritten
+
+### Notes
+
+A commit that changes source without a test is now **refused**. If that fires on
+a legitimate change, add the trailer — and if it fires often, fix the globs in
+`.claude/test-policy.json` rather than the rule.
+
 ## [3.0.0] — 2026-09-22
 
 Dual-agent support, Agent Skills, working security hooks, and a scaffolder that

@@ -14,11 +14,14 @@
 
 **For every request, without exception:**
 
-1. **ANALYZE** the request — impacts, dependencies, regression risks
-2. **WRITE** a structured plan (format: `/plan`)
-3. **WAIT** for explicit approval — accepted: `ok` · `proceed` · `go` · `approved` · `✓`
-4. **IMPLEMENT** following the approved plan, step by step
-5. **VERIFY**: `make check` green · zero regressions
+1. **ANALYZE** the request — impacts, dependencies, regression risks, test scenarios
+2. **WRITE** a structured plan (format: `/plan`) — every architectural question
+   answered in it, "Open questions" empty
+3. **CERTIFY** — the `architect` agent confirms the plan is executable without
+   arbitration. A blocked plan is not presented for approval
+4. **WAIT** for explicit approval — accepted: `ok` · `proceed` · `go` · `approved` · `✓`
+5. **IMPLEMENT** following the approved plan, step by step
+6. **VERIFY**: `make check` green · zero regressions
 
 > ⛔ No code before the plan is approved.
 > ⛔ Any deviation from the approved plan must be flagged and re-approved.
@@ -82,9 +85,34 @@ The test suite must pass before every commit. Commands: `make test` (see B4).
 | **E2E** | Critical business workflows | Happy path + edge cases |
 | **Security** | Every endpoint, every crypto op | Auth, perms, injection |
 
+**Scenarios come first.** Test scenarios are designed during analysis, not after
+the code: `/spec` carries a numbered matrix (`SC-n`) tied to the requirements,
+`/plan` repeats it, `/tdd` names the scenario each red test covers, and `/review`
+treats an uncovered scenario as blocking. The `test-architect` agent produces the
+matrix and cannot write code.
+
 **Naming:** `[Subject]_[Scenario]_[ExpectedResult]` — e.g. `CreateUser_WithDuplicateEmail_ThrowsConflictError`
 
 **Rules:** one test = one behavior · mocks only at system boundaries · deterministic · no arbitrary `sleep`
+
+### The gate
+
+A commit whose staged diff touches source without touching a test is **refused**
+by a hook, not merely discouraged (ADR-002). What counts as source and as test is
+declared in `.claude/test-policy.json`; tests written inside a source file
+(Rust's `#[cfg(test)]`, a nested JUnit class) are recognised too.
+
+A change that genuinely carries no behaviour — a pure rename, a move — passes with
+a trailer that states why:
+
+```
+refactor(api): rename Handler to Controller
+
+Test-Exempt: pure rename, behaviour unchanged, existing suite still covers it
+```
+
+The reason stays in the history where a reviewer sees it. `--no-verify` is denied.
+A rising rate of exemptions means the policy's globs need fixing, not the rule.
 
 ---
 
@@ -150,7 +178,9 @@ and opencode. Invoke with `/<name>`; an agent may also select one on its own.
 | `/perf-audit` | Performance budgets (B6) and anti-patterns |
 | `/commit` | Conventional commit with pre-commit gates |
 | `/pr` | Pull request description from the diff |
+| `/ship` | Branch → commit → push → draft PR → wait for CI → ready (A14) |
 | `/prime` | Load project context at the start of a session |
+| `/build` | Full run: cohort of implementers, jury, quorum, bounded iteration |
 
 ---
 
@@ -161,6 +191,11 @@ and opencode. Invoke with `/<name>`; an agent may also select one on its own.
 **Metrics** (Prometheus format): request latency histogram (P50/P95/P99) · error rate per HTTP code · request volume · business metrics defined in B6
 
 **Health checks**: `GET /health/live` (process alive) · `GET /health/ready` (dependencies reachable) · return `503` if a critical dependency is unavailable
+
+**Agent telemetry**: every subagent start and stop is appended to
+`.claude/run/ledger.jsonl` by a hook, with a secret-masked one-line summary.
+`make agents` renders it. The protocol is the file, so both agents feed the same
+ledger — see `docs/DUAL-AGENT.md` and ADR-003.
 
 **Rules**: no trace-id in public API responses · error spans include message + type, not full stack trace · no PII in metric labels
 
@@ -202,6 +237,24 @@ Performance anti-patterns checklist: see the `perf-audit` skill.
 > A rule the model *should* follow goes in this file. A rule that **must** hold
 > regardless of what the model decides goes in a hook — see `.claude/hooks/`.
 
+### Orchestrating a cohort
+
+For work whose cost of being wrong exceeds the cost of running it several times,
+`/build` runs a cohort of implementers against one certified plan and has a jury
+score the candidates (ADR-005). Four rules make it worth the spend:
+
+- **The objective gate comes before any opinion.** A candidate that fails
+  `make check` is disqualified before a juror reads it
+- **Quorum, not consensus**: 2 of 3 jurors PASS, no FAIL on correctness or
+  security, total ≥ 21/30
+- **Consolidation takes named contributions**, never a blind merge. Returning the
+  base unchanged is a legitimate result
+- **The iteration count is a ceiling with a ratchet**: an iteration that lowers the
+  score, the coverage or the passing test count is rejected
+
+Reaching the ceiling without quorum means stopping and reporting, never shipping
+the best of a bad set.
+
 ### Context hygiene
 
 - One session = one task. Start a new session rather than pivoting subject.
@@ -215,6 +268,9 @@ Performance anti-patterns checklist: see the `perf-audit` skill.
 - `.claude/skills/` is read by both tools — write skills there, nowhere else.
 - `.opencode/agents/`, `.opencode/commands/` and the `permission` block of
   `opencode.json` are **generated**. Never edit them by hand — run `make sync`.
+- Subagent progress is observable: `make agents` reads `.claude/run/ledger.jsonl`,
+  which both runtimes append to. Never ask an agent to report its own progress —
+  an instruction is followed most of the time, and most of the time is not a protocol.
 - See `docs/DUAL-AGENT.md` for the full compatibility matrix.
 
 ---
@@ -249,6 +305,55 @@ Reference checklist: OWASP Top 10 for LLM Applications.
 - **New dependency = a decision**: justify it in the PR (size, maintenance, licence, CVEs)
 - **`make audit`** runs in CI and blocks on critical CVEs
 - Prefer the standard library over a 3-line dependency
+
+---
+
+## A14 · DELIVERY FLOW
+
+The path from a change to a merged change. Every value it depends on — forge,
+branch convention, required checks, merge strategy — is declared in **B8**, so an
+agent reads it rather than guessing.
+
+### Never commit on the integration branch
+
+A branch comes **before** the first edit, not after the work is done:
+
+```bash
+git fetch origin <main>
+git checkout -b <branch convention from B8> origin/<main>
+```
+
+Already on a branch for this change? Stay on it. One change, one branch.
+
+### Push opens a draft
+
+A push is followed by a **draft** pull request — always, including for a change
+you consider finished. The draft is where CI runs and where a reviewer can look
+early; it costs nothing and it makes work in progress visible.
+
+### Ready is earned, not declared
+
+A pull request moves out of draft only when **every** criterion is green:
+
+- [ ] CI passes on the head commit — not on an earlier one
+- [ ] `make check` passes locally
+- [ ] every review thread is resolved
+- [ ] no merge conflict with the base branch
+- [ ] the description follows the repository template
+
+### Wait for the build, then act
+
+After pushing, the agent **waits for the build result**. It does not report
+"pushed, should be fine" and move on.
+
+- Green → promote to ready, and say so
+- Red → read the failure, fix it, push again, wait again
+- Still red after the fix → say precisely what fails and what you need. Never
+  disable a test, never re-run hoping for a different outcome (A4)
+- Timed out (budget in B8) → hand back the check status as it stands rather than
+  waiting indefinitely
+
+`/ship` performs this flow end to end.
 
 ---
 
@@ -315,6 +420,7 @@ make dev          # run locally
 make audit        # dependency / CVE audit
 make check        # test + lint + typecheck + build — the quality gate
 make sync         # regenerate the .opencode/ artifacts
+make agents       # what the subagents have been doing (A8)
 ```
 
 The stack-specific implementation lives in the generated `Makefile`.
@@ -368,12 +474,68 @@ The stack-specific implementation lives in the generated `Makefile`.
 
 ---
 
-## B8 · TEAM CONTEXT & WORKFLOW
+## B8 · TEAM CONTEXT & DELIVERY
+
+> Agents read this section instead of guessing. An empty field is a question an
+> agent will have to ask, or worse, answer on its own.
+
+### Forge and git model
 
 ```
-Main branches    : <main | master | develop>
-Merge strategy   : <PR with mandatory review | trunk-based | gitflow>
+Forge            : <github | gitlab | bitbucket>
+Repository URL   : <https://...>
+Git model        : <trunk-based | github-flow | gitflow>
+Integration branch : <main | master | develop>
+Release branches : <none | release/x.y>
+Protected branches : <which, and what protection>
+```
+
+### Branch naming
+
+```
+Convention       : <feat/PROJ-123-short-slug | feature/... | user/topic>
+Types allowed    : <feat | fix | chore | docs | refactor | perf | security>
+Lifetime         : <deleted on merge | kept>
+```
+
+### Commits, tags and versions
+
+```
+Commit convention : Conventional Commits (A3)
+Versioning        : <SemVer 2.0.0>
+Tag format        : <vX.Y.Z>  — e.g. v3.1.0
+Pre-release       : <vX.Y.Z-rc.N | none>
+Who tags          : <maintainer | release pipeline>
+Changelog source  : <CHANGELOG.md, Keep a Changelog | generated from commits>
+```
+
+### Pull requests
+
+```
+Opened as         : draft (A14)
+Ready criteria    : CI green on head · make check green · threads resolved ·
+                    no conflict · template followed
+Required approvals: <n>  — <who, or CODEOWNERS>
+Merge strategy    : <squash | merge commit | rebase>
+Branch on merge   : <delete | keep>
+Description       : .github/pull_request_template.md
+```
+
+### CI
+
+```
+Provider          : <GitHub Actions | GitLab CI | Bitbucket Pipelines | ...>
+Required checks   : <exact check names that must pass>
+Typical duration  : <n minutes>
+Agent wait budget : <20 minutes>  — after this, hand back the status as it stands
+Watch command     : <gh pr checks --watch | glab ci status --live | ...>
+```
+
+### Environments and ownership
+
+```
 Environments     : <dev | staging | prod>
-Code review      : <required approvers, criteria>
-Deploy gate      : <who can deploy to prod>
+Deploy gate      : <who can deploy to prod, and how>
+Code owners      : <.github/CODEOWNERS, or who reviews what>
+On-call / runbooks : <docs/runbooks/>
 ```

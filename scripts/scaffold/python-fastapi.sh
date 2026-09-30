@@ -5,6 +5,9 @@ STACK_TIER="A"
 STACK_LABEL="Python 3.12 / FastAPI"
 STACK_REQUIRES="uv"
 STACK_DIRS="src/@@PROJECT_SNAKE@@/routers src/@@PROJECT_SNAKE@@/services src/@@PROJECT_SNAKE@@/repositories src/@@PROJECT_SNAKE@@/schemas src/@@PROJECT_SNAKE@@/core tests/unit tests/integration"
+# Test gate boundary (ADR-002): what counts as source, what counts as a test.
+TEST_SOURCES="src/**"
+TEST_PATTERNS="tests/** **/test_*.py **/conftest.py"
 CMD_INSTALL="uv sync"
 CMD_TEST="uv run pytest --cov=src --cov-report=term-missing --cov-fail-under=80"
 CMD_LINT="uv run ruff check .

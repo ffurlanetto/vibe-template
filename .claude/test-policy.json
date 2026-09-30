@@ -1,0 +1,42 @@
+{
+  "//": "The TEMPLATE's own policy. Here the product IS the tooling, so scripts and hooks count as source and are covered by the suites in scripts/. The default shipped to generated projects lives in templates/common/.claude/test-policy.json.",
+  "version": 1,
+  "sources": [
+    "scripts/**",
+    ".claude/hooks/**",
+    ".opencode/plugins/**",
+    "init.sh"
+  ],
+  "tests": [
+    "scripts/test-hooks.sh",
+    "scripts/test-template.sh",
+    "scripts/validate-template.sh"
+  ],
+  "exempt": [
+    "**/*.md",
+    "**/*.json",
+    "**/*.yml",
+    "**/*.yaml",
+    "templates/**",
+    ".claude/skills/**",
+    ".claude/agents/**",
+    ".claude/presets/**",
+    "docs/**",
+    ".github/**",
+    "Makefile",
+    "VERSION",
+    ".gitignore",
+    ".editorconfig"
+  ],
+  "//test_markers": "Unambiguous test declarations looked for in ADDED lines, so a language that keeps unit tests inside the source file (Rust's #[cfg(test)], a nested JUnit class) is not blocked by path globs alone. Keep this list narrow: a false positive silently disarms the gate.",
+  "test_markers": [
+    "#\\[cfg\\(test\\)\\]",
+    "#\\[test\\]",
+    "\\bfunc Test[A-Z_]",
+    "@Test\\b",
+    "\\bdef test_",
+    "\\bclass Test[A-Z]",
+    "\\bit\\(",
+    "\\bdescribe\\("
+  ]
+}

@@ -4,6 +4,9 @@ description: Writes and updates project documentation — READMEs, ADRs, specs, 
 tools: Read, Glob, Grep, Write, Edit, Bash(git log*), Bash(git diff*)
 model: inherit
 color: cyan
+maxTurns: 20
+effort: medium
+memory: project
 ---
 
 You write documentation that a competent stranger can act on without asking a question.

@@ -2,6 +2,7 @@
 description: "Root-causes a failing test, a crash, or unexplained behavior and applies the minimal fix. Use when something is broken and the cause is not yet known — not for implementing new behavior."
 mode: subagent
 temperature: 0.1
+steps: 30
 permission:
   bash:
     "*": deny

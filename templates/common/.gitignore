@@ -42,6 +42,7 @@ htmlcov/
 
 # ── Agent local state ────────────────────────────────────────────────────────
 .claude/settings.local.json
+.claude/run/
 .claude/.template-version
 .opencode/node_modules/
 .opencode/package.json

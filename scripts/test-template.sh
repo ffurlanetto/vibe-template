@@ -35,6 +35,9 @@ has "$P" "opencode.json"                "opencode.json installed"
 has "$P" ".claude/skills/plan/SKILL.md" "skills installed (shared by both agents)"
 has "$P" ".claude/agents/architect.md"  "subagents installed"
 has "$P" ".claude/hooks/scan-secrets.sh" "hooks installed"
+has "$P" ".claude/hooks/require-tests.sh" "test gate installed"
+has "$P" ".claude/hooks/ledger.sh"        "ledger hook installed"
+has "$P" "scripts/show-ledger.sh"         "ledger reader installed"
 has "$P" ".opencode/agents/architect.md" "generated opencode agents installed"
 has "$P" ".opencode/plugins/guardrails.js" "opencode guardrail plugin installed"
 has "$P" "Makefile"                     "Makefile installed"
@@ -54,10 +57,17 @@ grep -q "struct-demo" "$P/AGENTS.md" && ok "project name substituted in B1" || k
 grep -q "PROJECT_NAME" "$P/AGENTS.md" && ko "placeholder cleared" "<PROJECT_NAME> still present" || ok "placeholder cleared"
 grep -q "Auto-injected preset: rust" "$P/AGENTS.md" && ok "preset injected into B3" || ko "preset injection" "marker missing"
 grep -qP "^\tcargo test" "$P/Makefile" && ok "Makefile carries the stack commands" || ko "Makefile commands" "recipe missing"
-for target in install test lint typecheck build dev audit check; do
+for target in install test lint typecheck build dev audit check agents; do
   grep -qE "^${target}:" "$P/Makefile" || ko "make ${target}" "target missing"
 done
-ok "the eight contract targets are declared"
+ok "the nine contract targets are declared"
+
+has "$P" ".claude/test-policy.json"     "test-gate policy installed"
+if grep -q '"src/\*\*"' "$P/.claude/test-policy.json" 2>/dev/null; then
+  ok "policy reflects the stack's own layout"
+else
+  ko "policy reflects the stack's own layout" "generic globs only"
+fi
 
 printf '\n\033[0;36midempotence\033[0m\n'
 cp "$P/AGENTS.md" "$TMP/agents-before.md"
@@ -71,6 +81,7 @@ fi
 printf '\n\033[0;36magent selection\033[0m\n'
 C="$TMP/claude-only"
 "$ROOT/init.sh" claude-demo go "$C" --agent claude --scaffold none --yes >/dev/null 2>&1
+has "$C" ".claude/test-policy.json" "policy installed even with --scaffold none"
 has "$C" "CLAUDE.md" "claude-only: CLAUDE.md present"
 hasnt "$C" "opencode.json" "claude-only: no opencode config"
 hasnt "$C" ".opencode" "claude-only: no .opencode directory"

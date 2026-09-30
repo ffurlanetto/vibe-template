@@ -13,6 +13,7 @@ id_ed25519*
 
 # ── Claude Code / opencode local state ───────────────────────────────────────
 .claude/settings.local.json
+.claude/run/
 .claude/.template-version
 .opencode/node_modules/
 .opencode/package.json

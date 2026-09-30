@@ -2,6 +2,7 @@
 description: "Audits code for vulnerabilities — secrets, injection, broken authentication and authorization, weak cryptography, unsafe deserialization, supply-chain risk. Use before exposing an endpoint, touching credentials, or shipping to production. Read-only."
 mode: subagent
 temperature: 0.1
+steps: 25
 permission:
   bash:
     "*": deny

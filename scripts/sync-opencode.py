@@ -116,14 +116,21 @@ def build_agents() -> dict[Path, str]:
         meta, body = split_frontmatter(source.read_text(encoding="utf-8"))
         name = meta.get("name", source.stem)
         description = meta.get("description", "")
-        # `model` is deliberately dropped: an opencode subagent inherits the model
-        # of the primary agent that invoked it, and Claude's aliases (opus, sonnet)
-        # are not valid provider/model ids here.
+        # Fields that do not survive the crossing, and why:
+        #   model    — an opencode subagent inherits the model of the primary agent
+        #              that invoked it, and "opus"/"sonnet" are not provider ids here
+        #   effort   — no equivalent
+        #   memory   — no equivalent
+        #   maxTurns — becomes `steps`, opencode's own iteration budget
         frontmatter = [
             "---",
             f"description: {yaml_quote(description)}",
             "mode: subagent",
             "temperature: 0.1",
+        ]
+        if meta.get("maxTurns", "").strip().isdigit():
+            frontmatter.append(f"steps: {meta['maxTurns'].strip()}")
+        frontmatter += [
             yaml_permission(agent_permission(meta.get("tools", ""))),
             "---",
         ]
