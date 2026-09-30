@@ -18,11 +18,23 @@ because a parse error resolving to "adopt" would ship an unreviewed candidate.
 See ADR-007, which also records what this does *not* do: the orchestrator is
 instructed to call it, not forced to.
 """
+
 from __future__ import annotations
 
 import json
 import sys
 from typing import Any
+
+
+def _out(line: str) -> None:
+    """Write one line to stdout — the decision, and nothing else."""
+    sys.stdout.write(line + "\n")
+
+
+def _fail(message: str) -> None:
+    """Write one refusal to stderr. stdout stays empty so no caller reads a verdict."""
+    sys.stderr.write(f"quorum: {message}\n")
+
 
 # The three lenses of the jury, and the two whose FAIL is fatal whatever the
 # totals say. Hardcoded on purpose: an axis is an agent, and a bundle that could
@@ -30,11 +42,11 @@ from typing import Any
 JURORS = ("code-reviewer", "security-auditor", "test-architect")
 BLOCKING_AXES = ("code-reviewer", "security-auditor")
 
-MIN_TOTAL = 21          # out of 30
-MIN_PASSES = 2          # of 3
+MIN_TOTAL = 21  # out of 30
+MIN_PASSES = 2  # of 3
 MAX_SCORE = 10
 COVERAGE_EPSILON = 1e-9  # coverage is a float; equality needs a tolerance
-ID_LIMIT = 200          # an id is echoed back; it does not get to be unbounded
+ID_LIMIT = 200  # an id is echoed back; it does not get to be unbounded
 
 
 class Invalid(Exception):
@@ -53,7 +65,9 @@ def _int(value: Any, what: str) -> int:
 
 
 def _number(value: Any, what: str) -> float:
-    _require(isinstance(value, (int, float)) and not isinstance(value, bool), f"{what} must be a number")
+    _require(
+        isinstance(value, (int, float)) and not isinstance(value, bool), f"{what} must be a number"
+    )
     return float(value)
 
 
@@ -83,16 +97,26 @@ def read_candidate(raw: Any, index: int) -> dict[str, Any]:
     for entry in jurors:
         _require(isinstance(entry, dict), f"{cid}: each juror must be an object")
         agent = entry.get("agent")
-        _require(agent in JURORS, f"{cid}: unknown juror {agent!r} — expected one of {', '.join(JURORS)}")
+        _require(
+            agent in JURORS, f"{cid}: unknown juror {agent!r} — expected one of {', '.join(JURORS)}"
+        )
         _require(agent not in seen, f"{cid}: {agent} appears twice")
         verdict = entry.get("verdict")
-        _require(verdict in ("PASS", "FAIL"), f"{cid}: {agent} returned {verdict!r}, expected PASS or FAIL")
+        _require(
+            verdict in ("PASS", "FAIL"),
+            f"{cid}: {agent} returned {verdict!r}, expected PASS or FAIL",
+        )
         score = _int(entry.get("score"), f"{cid}: {agent}'s score")
-        _require(0 <= score <= MAX_SCORE, f"{cid}: {agent}'s score {score} is outside 0-{MAX_SCORE}")
+        _require(
+            0 <= score <= MAX_SCORE, f"{cid}: {agent}'s score {score} is outside 0-{MAX_SCORE}"
+        )
         seen[agent] = verdict
         total += score
     missing = [name for name in JURORS if name not in seen]
-    _require(not missing, f"{cid}: no verdict from {', '.join(missing)} — the quorum is defined over all three")
+    _require(
+        not missing,
+        f"{cid}: no verdict from {', '.join(missing)} — the quorum is defined over all three",
+    )
 
     size = raw.get("size") or {}
     _require(isinstance(size, dict), f"{cid}: size must be an object")
@@ -104,8 +128,16 @@ def read_candidate(raw: Any, index: int) -> dict[str, Any]:
         "verdicts": seen,
         "passes": sum(1 for v in seen.values() if v == "PASS"),
         "blocking_fail": [a for a in BLOCKING_AXES if seen[a] == "FAIL"],
-        "files_changed": _int(size["files_changed"], f"{cid}: files_changed") if "files_changed" in size else None,
-        "lines_changed": _int(size["lines_changed"], f"{cid}: lines_changed") if "lines_changed" in size else None,
+        "files_changed": (
+            _int(size["files_changed"], f"{cid}: files_changed")
+            if "files_changed" in size
+            else None
+        ),
+        "lines_changed": (
+            _int(size["lines_changed"], f"{cid}: lines_changed")
+            if "lines_changed" in size
+            else None
+        ),
     }
 
 
@@ -168,12 +200,20 @@ def ratchet_verdict(best_total: int, bundle: dict[str, Any]) -> tuple[str, str]:
     regressions = []
     if best_total < previous["best_total"]:
         regressions.append(f"total score {previous['best_total']} → {best_total}")
-    if metrics and previous.get("passing_tests") is not None and "passing_tests" in metrics:
-        if metrics["passing_tests"] < previous["passing_tests"]:
-            regressions.append(f"passing tests {previous['passing_tests']} → {metrics['passing_tests']}")
-    if metrics and previous.get("coverage") is not None and "coverage" in metrics:
-        if metrics["coverage"] < previous["coverage"] - COVERAGE_EPSILON:
-            regressions.append(f"coverage {previous['coverage']} → {metrics['coverage']}")
+    if (
+        "passing_tests" in metrics
+        and "passing_tests" in previous
+        and metrics["passing_tests"] < previous["passing_tests"]
+    ):
+        regressions.append(
+            f"passing tests {previous['passing_tests']} → {metrics['passing_tests']}"
+        )
+    if (
+        "coverage" in metrics
+        and "coverage" in previous
+        and metrics["coverage"] < previous["coverage"] - COVERAGE_EPSILON
+    ):
+        regressions.append(f"coverage {previous['coverage']} → {metrics['coverage']}")
     if regressions:
         return "rejected", "; ".join(regressions)
     return "ok", ""
@@ -181,22 +221,28 @@ def ratchet_verdict(best_total: int, bundle: dict[str, Any]) -> tuple[str, str]:
 
 def flat(later: dict[str, Any], earlier: dict[str, Any]) -> bool:
     """True when `later` improved on none of the three measures."""
-    if later["best_total"] > earlier["best_total"]:
-        return False
-    if later.get("passing_tests", 0) > earlier.get("passing_tests", 0):
-        return False
-    if later.get("coverage", 0.0) > earlier.get("coverage", 0.0) + COVERAGE_EPSILON:
-        return False
-    return True
+    return not (
+        later["best_total"] > earlier["best_total"]
+        or later.get("passing_tests", 0) > earlier.get("passing_tests", 0)
+        or later.get("coverage", 0.0) > earlier.get("coverage", 0.0) + COVERAGE_EPSILON
+    )
 
 
 def read_bundle(raw: Any) -> dict[str, Any]:
+    """Validate the whole bundle and reduce it to what `decide` needs.
+
+    Every key the rules depend on is required rather than defaulted. A missing
+    ceiling that defaulted to some number would silently change when the loop
+    stops, which is the kind of default that is wrong in a way nobody notices.
+    """
     _require(isinstance(raw, dict), "the bundle must be a JSON object")
     for key in ("candidates", "iteration", "ceiling"):
         _require(key in raw, f"the bundle has no '{key}'")
     candidates = raw["candidates"]
-    _require(isinstance(candidates, list) and candidates,
-             "candidates must be a non-empty list — no cohort is a caller bug, not a verdict")
+    _require(
+        isinstance(candidates, list) and candidates,
+        "candidates must be a non-empty list — no cohort is a caller bug, not a verdict",
+    )
 
     history = raw.get("history") or []
     _require(isinstance(history, list), "history must be a list")
@@ -265,9 +311,11 @@ def decide(bundle: dict[str, Any]) -> dict[str, Any]:
             decision="ADOPT",
             candidate=winner["id"],
             tie_break=tie_break,
-            reason=(f"{winner['id']} reaches quorum: {winner['passes']} of 3 PASS, "
-                    f"no blocking FAIL, total {winner['total']}/30"
-                    + (f"; chosen on {tie_break}" if len(accepted) > 1 else "")),
+            reason=(
+                f"{winner['id']} reaches quorum: {winner['passes']} of 3 PASS, "
+                f"no blocking FAIL, total {winner['total']}/30"
+                + (f"; chosen on {tie_break}" if len(accepted) > 1 else "")
+            ),
         )
         return result
 
@@ -275,14 +323,17 @@ def decide(bundle: dict[str, Any]) -> dict[str, Any]:
     result["ratchet"] = state
     if state == "rejected":
         result["base"] = "previous-best"
-    ratchet_note = f"; ratchet rejected this iteration ({detail}) — the previous best stays the base" \
-        if state == "rejected" else ""
+    ratchet_note = (
+        f"; ratchet rejected this iteration ({detail}) — the previous best stays the base"
+        if state == "rejected"
+        else ""
+    )
 
     if not buildable:
         result.update(
             decision="STOP",
             reason="every candidate failed the objective gate — the plan is the suspect, "
-                   "not the cohort (build §4). Re-plan rather than re-run.",
+            "not the cohort (build §4). Re-plan rather than re-run.",
         )
         return result
 
@@ -293,8 +344,8 @@ def decide(bundle: dict[str, Any]) -> dict[str, Any]:
         result.update(
             decision="STOP",
             reason=f"{no_quorum}. Iteration {bundle['iteration']} of {bundle['ceiling']} "
-                   f"— the ceiling is reached; report the blocker, do not ship the best of a bad set"
-                   + ratchet_note,
+            f"— the ceiling is reached; report the blocker, "
+            f"do not ship the best of a bad set" + ratchet_note,
         )
         return result
 
@@ -305,8 +356,8 @@ def decide(bundle: dict[str, Any]) -> dict[str, Any]:
             result.update(
                 decision="STOP",
                 reason=f"{no_quorum}. Two iterations with no measurable gain — diminishing "
-                       f"returns; a loop optimising a criterion it cannot move is burning budget"
-                       + ratchet_note,
+                f"returns; a loop optimising a criterion it cannot move is burning budget"
+                + ratchet_note,
             )
             return result
 
@@ -314,34 +365,39 @@ def decide(bundle: dict[str, Any]) -> dict[str, Any]:
         result.update(
             decision="CONSOLIDATE",
             reason=f"{no_quorum}. The jury named complementary strengths, so consolidate "
-                   f"before iterating — it counts as an iteration" + ratchet_note,
+            f"before iterating — it counts as an iteration" + ratchet_note,
         )
         return result
 
     result.update(
         decision="ITERATE",
         reason=f"{no_quorum}. Feed the blocking findings back to the cohort "
-               f"(iteration {bundle['iteration']} of {bundle['ceiling']})" + ratchet_note,
+        f"(iteration {bundle['iteration']} of {bundle['ceiling']})" + ratchet_note,
     )
     return result
 
 
 def main() -> int:
+    """Read one bundle from stdin, write one decision to stdout.
+
+    Returns the process exit status: 0 when a decision was made, 2 when the
+    bundle could not be trusted.
+    """
     try:
         raw = json.loads(sys.stdin.read())
     except RecursionError:
-        print("quorum: the bundle is nested too deeply to parse", file=sys.stderr)
+        _fail("the bundle is nested too deeply to parse")
         return 2
     except Exception as error:  # noqa: BLE001 — any unparseable input is the same refusal
-        print(f"quorum: the bundle is not valid JSON ({error})", file=sys.stderr)
+        _fail(f"the bundle is not valid JSON ({error})")
         return 2
     try:
-        print(json.dumps(decide(read_bundle(raw)), ensure_ascii=False))
+        _out(json.dumps(decide(read_bundle(raw)), ensure_ascii=False))
     except Invalid as error:
-        print(f"quorum: {error}", file=sys.stderr)
+        _fail(str(error))
         return 2
     except RecursionError:
-        print("quorum: the bundle is nested too deeply to read", file=sys.stderr)
+        _fail("the bundle is nested too deeply to read")
         return 2
     return 0
 
