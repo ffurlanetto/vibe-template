@@ -180,6 +180,7 @@ and opencode. Invoke with `/<name>`; an agent may also select one on its own.
 | `/pr` | Pull request description from the diff |
 | `/ship` | Branch → commit → push → draft PR → wait for CI → ready (A14) |
 | `/prime` | Load project context at the start of a session |
+| `/build` | Full run: cohort of implementers, jury, quorum, bounded iteration |
 
 ---
 
@@ -235,6 +236,24 @@ Performance anti-patterns checklist: see the `perf-audit` skill.
 
 > A rule the model *should* follow goes in this file. A rule that **must** hold
 > regardless of what the model decides goes in a hook — see `.claude/hooks/`.
+
+### Orchestrating a cohort
+
+For work whose cost of being wrong exceeds the cost of running it several times,
+`/build` runs a cohort of implementers against one certified plan and has a jury
+score the candidates (ADR-005). Four rules make it worth the spend:
+
+- **The objective gate comes before any opinion.** A candidate that fails
+  `make check` is disqualified before a juror reads it
+- **Quorum, not consensus**: 2 of 3 jurors PASS, no FAIL on correctness or
+  security, total ≥ 21/30
+- **Consolidation takes named contributions**, never a blind merge. Returning the
+  base unchanged is a legitimate result
+- **The iteration count is a ceiling with a ratchet**: an iteration that lowers the
+  score, the coverage or the passing test count is rejected
+
+Reaching the ceiling without quorum means stopping and reporting, never shipping
+the best of a bad set.
 
 ### Context hygiene
 
