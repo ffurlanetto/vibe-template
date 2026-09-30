@@ -111,6 +111,54 @@ copy() {                      # copy <relative-source> [relative-destination]
   cp -R "$src" "$dst"
 }
 
+# The structural boundary between the shared kernel and the per-project
+# configuration. Renaming it in AGENTS.md without renaming it here stops the
+# bootstrap loudly (ADR-006) rather than shipping a truncated file.
+PART_B_MARKER="# PART B — PROJECT CONFIGURATION"
+
+# compose_agents_md — write $DEST/AGENTS.md as the kernel plus a blank Part B.
+#
+# The repository's own AGENTS.md carries Part A (the kernel, shared by every
+# project) followed by a Part B filled in for vibe-template itself. A generated
+# project must get the kernel verbatim and a Part B it still has to fill, so the
+# two halves are joined here rather than copied: Part A from the root file, Part B
+# from templates/common/AGENTS.part-b.md. Neither half exists twice, so neither
+# can drift.
+#
+# The join inserts nothing: Part A ends with its separator and a blank line and
+# the placeholder starts at the marker, so concatenation reproduces the original
+# byte for byte.
+compose_agents_md() {
+  local kernel="$TEMPLATE_DIR/AGENTS.md"
+  local placeholder="$TEMPLATE_DIR/templates/common/AGENTS.part-b.md"
+  local dst="$DEST/AGENTS.md"
+
+  [[ -f "$placeholder" ]] || error "Missing $placeholder — AGENTS.md cannot be composed."
+  grep -qF "$PART_B_MARKER" "$kernel" \
+    || error "'$kernel' has no '$PART_B_MARKER' line — refusing to ship it whole."
+
+  if [[ -e "$dst" ]]; then echo -e "${DIM}  · kept existing AGENTS.md${NC}"; return 0; fi
+  $DRY_RUN && { echo -e "${DIM}  · would add AGENTS.md${NC}"; return 0; }
+
+  mkdir -p "$(dirname "$dst")"
+  # Everything strictly above the marker, then the placeholder Part B.
+  awk -v marker="$PART_B_MARKER" '$0 == marker { exit } { print }' "$kernel" > "$dst"
+  cat "$placeholder" >> "$dst"
+}
+
+# substitute_project_name — put the project name where <PROJECT_NAME> stands.
+#
+# Done in python rather than with sed: the name is user input, and in a sed
+# replacement '&' expands to the whole match while the delimiter and backslashes
+# need escaping. A literal replace has no metacharacters to get wrong, so no
+# project name has to be rejected for the substitution's convenience.
+substitute_project_name() {
+  $DRY_RUN && return 0
+  while IFS= read -r file; do
+    NAME="$PROJECT_NAME" python3 "$TEMPLATE_DIR/scripts/substitute.py" "$file"
+  done < <(find "$DEST" -maxdepth 2 -name 'AGENTS.md' -o -maxdepth 2 -name 'CLAUDE.md' 2>/dev/null)
+}
+
 echo ""
 echo -e "${BOLD}Bootstrapping '${PROJECT_NAME}'${NC}"
 echo -e "  stack     : ${STACK}"
@@ -124,7 +172,7 @@ $DRY_RUN || mkdir -p "$DEST"
 
 # ── Agent configuration ──────────────────────────────────────────────────────
 info "Agent configuration"
-copy "AGENTS.md"
+compose_agents_md
 copy ".claude/skills"
 copy ".claude/agents"
 copy ".claude/hooks"
@@ -158,11 +206,7 @@ copy "templates/common/.gitignore" ".gitignore"
 
 # ── Project identity ─────────────────────────────────────────────────────────
 info "Project identity"
-if ! $DRY_RUN; then
-  while IFS= read -r file; do
-    sed -i.bak "s|<PROJECT_NAME>|${PROJECT_NAME}|g" "$file" && rm -f "${file}.bak"
-  done < <(find "$DEST" -maxdepth 2 -name 'AGENTS.md' -o -maxdepth 2 -name 'CLAUDE.md' 2>/dev/null)
-fi
+substitute_project_name
 
 # ── Preset injection into section B3 ─────────────────────────────────────────
 info "Injecting the ${STACK} preset into B3"

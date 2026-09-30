@@ -360,14 +360,20 @@ After pushing, the agent **waits for the build result**. It does not report
 # PART B — PROJECT CONFIGURATION
 ---
 
+> This is vibe-template's **own** configuration, filled in. The blank Part B that a
+> generated project starts from lives in `templates/common/AGENTS.part-b.md`, and
+> `init.sh` joins it to Part A above (ADR-006). Edit this section for the template
+> repository; edit that file for what new projects receive.
+
 ## B1 · PROJECT IDENTITY
 
 ```
-Project name  : <PROJECT_NAME>
-Description   : <One sentence describing what this project does>
-Type          : <web app | API | CLI | library | service | monorepo>
-Team / Owner  : <team name or responsible person>
-Ticket prefix : <PROJ>
+Project name  : vibe-template
+Description   : Bootstraps a repository with an agent configuration, guardrail hooks,
+                a shared skill set and a walking skeleton, for Claude Code and opencode.
+Type          : template · CLI
+Team / Owner  : ffurlanetto
+Ticket prefix : none — work is referenced by GitHub issue or PR number
 ```
 
 ---
@@ -375,32 +381,52 @@ Ticket prefix : <PROJ>
 ## B2 · TECH STACK
 
 ```
-Backend   : <framework + version>
-Frontend  : <framework + version | N/A>
-Mobile    : <framework | N/A>
-Database  : <engine + version>
-Cache     : <engine | N/A>
-Messaging : <broker | N/A>
-Infra     : <Docker + Kubernetes | cloud provider | on-prem>
-CI/CD     : <GitHub Actions | GitLab CI | ...>
+Backend   : none — the template ships as source and executes nothing at runtime
+Frontend  : N/A
+Mobile    : N/A
+Database  : N/A
+Cache     : N/A
+Messaging : N/A
+Runtime   : bash 4+ · python3 (standard library only) · git · GNU make
+Infra     : none — a git checkout is the whole runtime
+CI/CD     : GitHub Actions — .github/workflows/quality-gate.yml, template-ci.yml
 ```
+
+The runtime line is a hard constraint, not a snapshot: see B6.
 
 ---
 
 ## B3 · LANGUAGE / FRAMEWORK-SPECIFIC STANDARDS
 
-> Paste the matching preset from `.claude/presets/<stack>.md`. `init.sh` does this automatically.
-
 ### Code conventions
+
+**Shell** — every script starts `#!/usr/bin/env bash` and `set -uo pipefail`.
+`shellcheck -x -S warning` must be clean; `make lint` runs it over `init.sh`,
+`scripts/*.sh`, `scripts/scaffold/*.sh` and `.claude/hooks/*.sh`. Scripts are
+executable, which `scripts/validate-template.sh` asserts.
+
+**Python** — standard library only, no exception. Every file byte-compiles under
+`make typecheck`. Public functions carry a docstring and type hints. A helper that
+needs more than a few lines gets its own file in `scripts/` rather than a heredoc
+inside a shell script: nested heredocs terminate each other, and that defect has
+already shipped here twice.
+
+**Hooks** — read their payload as JSON on **stdin** (Claude Code) and accept the same
+input as argv (the opencode plugin). Both modes are asserted for every case in
+`scripts/test-hooks.sh`. Exit 2 blocks with the reason on stderr; exit 0 with a
+stderr message is an advisory.
+
+**Generated artifacts** — anything under `.opencode/` and the `permission` block of
+`opencode.json` are produced by `make sync`. Never hand-edit them; `make check-sync`
+fails the build if they drift.
 
 ### Naming and structure
 
 ```
-<
-- File naming: kebab-case | PascalCase | snake_case
-- Class / interface / type naming convention
-- Directory structure: feature-based | layer-based
->
+- File naming: kebab-case for scripts and docs; ADR-NNN-short-title.md for decisions
+- Skills: .claude/skills/*/SKILL.md, one directory per skill, read by both tools
+- Subagents: .claude/agents/*.md with name, description, tools, model, maxTurns
+- Directory structure: layer-based — scripts/, .claude/, templates/, docs/
 ```
 
 ---
@@ -411,57 +437,68 @@ Every project exposes the **same command contract** through its `Makefile`,
 whatever the stack. Agents call these — never the raw stack commands.
 
 ```bash
-make install      # install dependencies
-make test         # run tests — required before every commit
-make lint         # lint / style check — zero warnings
-make typecheck    # type check (no-op if not applicable)
-make build        # full build
-make dev          # run locally
-make audit        # dependency / CVE audit
-make check        # test + lint + typecheck + build — the quality gate
+make install      # no-op — the template has no runtime dependencies
+make test         # test-hooks + test-quorum + the bootstrap suite
+make lint         # shellcheck, zero warnings
+make typecheck    # byte-compile scripts/*.py
+make build        # no-op — the template ships as source
+make audit        # no-op — no third-party dependency
+make check        # validate + lint + typecheck + test + check-sync — the quality gate
 make sync         # regenerate the .opencode/ artifacts
 make agents       # what the subagents have been doing (A8)
+make demo         # bootstrap a throwaway project into /tmp/vibe-demo
 ```
 
-The stack-specific implementation lives in the generated `Makefile`.
+`make check` is the gate. It must be green before every commit and is what CI runs.
 
 ---
 
 ## B5 · PROJECT ARCHITECTURE
 
 ```
-<project-name>/
-├── AGENTS.md       # ← this file (source of truth)
-├── CLAUDE.md       # imports AGENTS.md + Claude Code specifics
-├── opencode.json   # opencode configuration
-├── Makefile        # B4 command contract
+vibe-template/
+├── AGENTS.md       # Part A (the kernel) + this Part B — source of truth
+├── CLAUDE.md       # @AGENTS.md + the Claude Code specifics
+├── opencode.json   # opencode configuration; its permission block is generated
+├── init.sh         # the bootstrap: composes, substitutes, injects, scaffolds
+├── Makefile        # the B4 contract for the template itself
 ├── docs/
-│   ├── adr/        # Architecture Decision Records
+│   ├── adr/        # Architecture Decision Records for the template
 │   ├── specs/      # Functional specifications
-│   └── runbooks/
-├── .claude/        # skills (shared), agents, hooks, settings
-├── .opencode/      # GENERATED — do not edit
-├── <src>/          # Detail per module
-└── <tests>/
+│   └── DUAL-AGENT.md
+├── .claude/        # skills (shared), agents, hooks, presets, settings
+├── .opencode/      # GENERATED — agents, commands, plugins
+├── scripts/        # the bootstrap's helpers and the three test suites
+└── templates/
+    ├── common/     # what every generated project receives, stack-independent
+    └── skeleton/   # the walking skeleton, per stack
 ```
 
 | Component | Responsibility |
 |-----------|---------------|
-| `<module-1>` | <description> |
+| `init.sh` | Composes `AGENTS.md`, substitutes the project name, injects the B3 preset, delegates the skeleton |
+| `scripts/scaffold.sh` | Writes the walking skeleton for the chosen stack |
+| `scripts/sync-opencode.py` | Generates `.opencode/` and the `permission` block from the Claude Code sources |
+| `scripts/quorum.py` | The cohort decision function used by `/build` (ADR-007) |
+| `.claude/hooks/` | The guarantees enforced outside the model — secrets, the test gate, the ledger |
+| `templates/common/` | Files shipped verbatim, including the blank Part B |
 
 ---
 
 ## B6 · PROJECT-SPECIFIC CONSTRAINTS
 
 ```
-<
-- GDPR / compliance rules
-- SLA targets (P99, P50, error budget)
-- Data sovereignty / retention requirements
-- Multi-tenancy isolation rules
-- Performance budgets (override A10 defaults here)
-- LLM budgets if applicable (A12): max tokens/call, P99 latency, allowed model ids
->
+- No third-party runtime dependency, ever. Python uses the standard library only.
+  A dependency would have to be installed before the template could install anything.
+- init.sh must work offline. It fetches nothing and executes nothing it did not ship.
+- Floor: bash 4+, python3.8+, git 2.20+, GNU make. No feature may raise it silently.
+- Every supported stack must bootstrap green in CI before a release.
+- No personal data: the template stores none, transmits none. GDPR scope is empty.
+- The ledger and the hooks must never persist a secret — masked before any write (A8).
+- Performance budgets: `make check` under 2 minutes on a laptop; Quality Gate under
+  2 minutes in CI; Template CI under 10 minutes across the full stack matrix.
+- LLM budgets (A12): N/A — the template ships no LLM-backed feature. It configures
+  agents; it does not call a model itself.
 ```
 
 ---
@@ -470,7 +507,9 @@ The stack-specific implementation lives in the generated `Makefile`.
 
 | System | Role | Protocol | Notes |
 |--------|------|----------|-------|
-| `<system>` | `<role>` | `<REST / gRPC / event>` | `<notes>` |
+| GitHub | Forge — code, issues, pull requests | HTTPS · git | The only integration |
+| GitHub Actions | CI — the two workflows named in B2 | YAML workflows | Uses `actions/checkout` only; no third-party action |
+| MCP servers | Optional, per project | stdio · HTTP | `.mcp.json.example` only. An MCP tool is remote code — review before enabling (A5) |
 
 ---
 
@@ -478,35 +517,38 @@ The stack-specific implementation lives in the generated `Makefile`.
 
 > Agents read this section instead of guessing. An empty field is a question an
 > agent will have to ask, or worse, answer on its own.
+>
+> Everything below records what the repository **is** today, not what it should
+> become. `main` being unprotected is a fact, not an endorsement.
 
 ### Forge and git model
 
 ```
-Forge            : <github | gitlab | bitbucket>
-Repository URL   : <https://...>
-Git model        : <trunk-based | github-flow | gitflow>
-Integration branch : <main | master | develop>
-Release branches : <none | release/x.y>
-Protected branches : <which, and what protection>
+Forge            : github
+Repository URL   : https://github.com/ffurlanetto/vibe-template
+Git model        : github-flow — short-lived branches off main, merged by pull request
+Integration branch : main
+Release branches : none
+Protected branches : none — main is unprotected; the gate is CI and review, not a rule
 ```
 
 ### Branch naming
 
 ```
-Convention       : <feat/PROJ-123-short-slug | feature/... | user/topic>
-Types allowed    : <feat | fix | chore | docs | refactor | perf | security>
-Lifetime         : <deleted on merge | kept>
+Convention       : claude/short-slug for agent work · feat|fix|docs/short-slug otherwise
+Types allowed    : feat · fix · chore · docs · refactor · perf · security
+Lifetime         : deleted on merge
 ```
 
 ### Commits, tags and versions
 
 ```
-Commit convention : Conventional Commits (A3)
-Versioning        : <SemVer 2.0.0>
-Tag format        : <vX.Y.Z>  — e.g. v3.1.0
-Pre-release       : <vX.Y.Z-rc.N | none>
-Who tags          : <maintainer | release pipeline>
-Changelog source  : <CHANGELOG.md, Keep a Changelog | generated from commits>
+Commit convention : Conventional Commits (A3), enforced by review
+Versioning        : SemVer 2.0.0 — the number also lives in VERSION
+Tag format        : vX.Y.Z — e.g. v3.2.0
+Pre-release       : none
+Who tags          : the maintainer, by hand, after the release commit is merged
+Changelog source  : CHANGELOG.md, Keep a Changelog
 ```
 
 ### Pull requests
@@ -515,27 +557,32 @@ Changelog source  : <CHANGELOG.md, Keep a Changelog | generated from commits>
 Opened as         : draft (A14)
 Ready criteria    : CI green on head · make check green · threads resolved ·
                     no conflict · template followed
-Required approvals: <n>  — <who, or CODEOWNERS>
-Merge strategy    : <squash | merge commit | rebase>
-Branch on merge   : <delete | keep>
+Required approvals: 0 — nothing enforces one; a human still reads the diff (A9)
+Merge strategy    : merge commit
+Branch on merge   : delete
 Description       : .github/pull_request_template.md
 ```
 
 ### CI
 
 ```
-Provider          : <GitHub Actions | GitLab CI | Bitbucket Pipelines | ...>
-Required checks   : <exact check names that must pass>
-Typical duration  : <n minutes>
-Agent wait budget : <20 minutes>  — after this, hand back the status as it stands
-Watch command     : <gh pr checks --watch | glab ci status --live | ...>
+Provider          : GitHub Actions
+Required checks   : make check · Security guardrails · Dependency audit ·
+                    Template quality gate
+                    bootstrap X, for X in: python-fastapi, go, nestjs, frontend,
+                    java-spring, java-spring-gradle, java-quarkus
+                    bootstrap X (structure only), for X in: dotnet-aspnet, rust,
+                    rails, react-native, flutter, monorepo, sre
+Typical duration  : Quality Gate ~30s · Template CI ~3min
+Agent wait budget : 20 minutes — after this, hand back the status as it stands
+Watch command     : the GitHub MCP tools, or `gh pr checks --watch`
 ```
 
 ### Environments and ownership
 
 ```
-Environments     : <dev | staging | prod>
-Deploy gate      : <who can deploy to prod, and how>
-Code owners      : <.github/CODEOWNERS, or who reviews what>
-On-call / runbooks : <docs/runbooks/>
+Environments     : none — the template is not deployed; a release is a tag
+Deploy gate      : N/A
+Code owners      : ffurlanetto — no CODEOWNERS file
+On-call / runbooks : N/A — no running system
 ```

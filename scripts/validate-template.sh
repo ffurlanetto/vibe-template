@@ -104,6 +104,47 @@ found="$(find . -name '.DS_Store' -not -path './.git/*' | head -5)"
 
 [ -f AGENTS.md ] && ok "AGENTS.md present" || ko "AGENTS.md" "missing"
 grep -q '^@AGENTS.md' CLAUDE.md && ok "CLAUDE.md imports AGENTS.md" || ko "CLAUDE.md" "missing @AGENTS.md import"
+
+# ── The Part A / Part B split (ADR-006) ──────────────────────────────────────
+# AGENTS.md holds the kernel and this repository's own Part B; the blank Part B a
+# generated project starts from lives in templates/common/. init.sh joins them, so
+# the marker is load-bearing and neither half may drift into the other.
+MARKER='# PART B — PROJECT CONFIGURATION'
+PART_B_TPL='templates/common/AGENTS.part-b.md'
+
+markers=$(grep -cFx "$MARKER" AGENTS.md || true)
+[ "$markers" = "1" ] && ok "AGENTS.md carries the Part B marker exactly once" \
+  || ko "Part B marker" "found $markers occurrences in AGENTS.md, expected 1"
+
+[ -f "$PART_B_TPL" ] && ok "blank Part B template present" \
+  || ko "$PART_B_TPL" "missing — init.sh cannot compose AGENTS.md"
+
+if [ -f "$PART_B_TPL" ]; then
+  [ "$(head -1 "$PART_B_TPL")" = "$MARKER" ] && ok "blank Part B starts at the marker" \
+    || ko "blank Part B" "first line is not the marker"
+  missing=""
+  for section in B1 B2 B3 B4 B5 B6 B7 B8; do
+    grep -qE "^## ${section} " "$PART_B_TPL" || missing="$missing $section"
+  done
+  [ -z "$missing" ] && ok "blank Part B carries B1 through B8" \
+    || ko "blank Part B" "missing sections:$missing"
+  [ "$(grep -cF '<PROJECT_NAME>' "$PART_B_TPL")" = "1" ] \
+    && ok "blank Part B carries the project-name placeholder" \
+    || ko "blank Part B" "expected exactly one <PROJECT_NAME>"
+  grep -qF '### Code conventions' "$PART_B_TPL" \
+    && ok "blank Part B carries the preset injection marker" \
+    || ko "blank Part B" "'### Code conventions' missing — the B3 preset would be appended at EOF"
+  grep -qF 'Auto-injected preset:' "$PART_B_TPL" \
+    && ko "blank Part B" "contains init.sh's idempotence key — the preset would never be injected" \
+    || ok "blank Part B free of the idempotence key"
+fi
+
+# The template's own Part B is filled in: an agent reads it as fact, so a surviving
+# <angle-bracket> placeholder is a question it would have to answer on its own.
+# A letter must follow '<' so that '->', '<=' and '<!--' are not flagged.
+left=$(awk -v m="$MARKER" 'f && /<[A-Za-z][^>]*>/ { print } $0 == m { f = 1 }' AGENTS.md)
+[ -z "$left" ] && ok "AGENTS.md Part B is filled in — no placeholder left" \
+  || ko "Part B placeholders" "$(printf '%s' "$left" | head -3 | tr '\n' ' ')"
 [ -d .claude/commands ] && ko "legacy" ".claude/commands/ still present — skills replaced it" || ok "no legacy .claude/commands/"
 
 printf '\n%s passed, %s failed\n\n' "$PASS" "$FAIL"
